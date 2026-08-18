@@ -1,93 +1,218 @@
 import { useState, useRef, useEffect } from 'react'
 import { useMessages } from '../hooks/useMessages'
-
-function formatTime(iso) {
-  const d = new Date(iso)
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+import { useThreads } from '../hooks/useThreads'
+import MessageItem from './MessageItem'
+import ThreadPanel from './ThreadPanel'
+import { supabase } from '../lib/supabase'
+function SearchBar({ query, setQuery, results, onClose }) {
+  return (
+    <div className="flex items-center gap-2 ml-auto min-w-0 max-w-md">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Rechercher dans le salon…"
+        className="bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm rounded px-3 py-1.5 w-48 focus:w-64 transition-all outline-none focus:ring-2 focus:ring-[var(--accent)]"
+      />
+      {query && (
+        <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{results} résultat(s)</span>
+      )}
+      {query && (
+        <button onClick={onClose} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]" title="Fermer la recherche">
+          ✕
+        </button>
+      )}
+    </div>
+  )
 }
 
-export default function ChatArea({ channel, currentUserId }) {
-  const { messages, loading, sendMessage } = useMessages(channel?.id)
+export default function ChatArea({ channel, currentUserId, canModerate, onDmUser, threads: threadsProp }) {
+  const { messages, reactions, loading, sendMessage, toggleReaction } = useMessages(channel?.id)
+  const internalThreads = useThreads(channel?.id)
+  const threads = threadsProp || internalThreads
   const [input, setInput] = useState('')
+  const [query, setQuery] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState([]) // aperçus avant envoi
   const bottomRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
+    setInput('')
+    setQuery('')
+    setPendingFiles([])
+    threads.closeThread()
+  }, [channel?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!query) return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [query])
+
+  const scrollToBottom = () => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages.length, channel?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Recherche côté client (les messages chargés)
+  const q = query.trim().toLowerCase()
+  const searchResults = q
+    ? messages.filter((m) => m.content?.toLowerCase().includes(q))
+    : null
+
+  const displayed = searchResults || messages
+
+  const handleFiles = (files) => {
+    const list = Array.from(files).map((f) => ({ file: f, name: f.name, type: f.type, size: f.size, url: URL.createObjectURL(f) }))
+    setPendingFiles((prev) => [...prev, ...list].slice(0, 5))
+  }
+
+  const removePending = (index) => setPendingFiles((prev) => prev.filter((_, i) => i !== index))
 
   const handleSend = async (e) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() && pendingFiles.length === 0) return
+
+    let attachments = []
+    if (pendingFiles.length > 0) {
+      setUploading(true)
+      for (const p of pendingFiles) {
+        const path = `${channel.server_id}/${channel.id}/${Date.now()}-${p.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+        const { error } = await supabase.storage.from('files').upload(path, p.file)
+        if (!error) {
+          const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/files/${path}`
+          attachments.push({ url, name: p.name, type: p.type, size: p.size })
+        }
+      }
+      setUploading(false)
+      setPendingFiles([])
+    }
+
     const content = input
     setInput('')
-    await sendMessage(content)
+    await sendMessage(content, attachments)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e)
+    }
   }
 
   if (!channel) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[#949ba4]">
+      <div className="flex-1 flex items-center justify-center text-[var(--text-muted)]" data-ui-id="chat-area">
         Sélectionne un salon pour commencer à discuter
       </div>
     )
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#313338] min-w-0">
-      <div className="h-12 px-4 flex items-center border-b border-[#26272b] shadow-sm shrink-0">
-        <span className="text-[#80848e] text-xl mr-1.5">#</span>
-        <span className="text-white font-semibold">{channel.name}</span>
+    <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] min-w-0 relative" data-ui-id="chat-area">
+      <div className="h-12 px-4 flex items-center border-b border-[var(--border)] shadow-sm shrink-0" data-ui-id="chat-header">
+        <span className="text-[var(--text-faint)] text-xl mr-1.5">#</span>
+        <span className="text-[var(--text-primary)] font-semibold truncate">{channel.name}</span>
+        <SearchBar query={query} setQuery={setQuery} results={searchResults?.length ?? 0} onClose={() => setQuery('')} />
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col-reverse">
         <div ref={bottomRef} />
         <div className="flex flex-col">
-          {!loading && messages.length === 0 && (
-            <div className="px-4 py-8 text-center text-[#949ba4] text-sm">
-              Aucun message pour l'instant. Sois le premier à écrire !
+          {!loading && displayed.length === 0 && (
+            <div className="px-4 py-8 text-center text-[var(--text-muted)] text-sm">
+              {q ? 'Aucun résultat pour cette recherche' : "Aucun message pour l'instant. Sois le premier à écrire !"}
             </div>
           )}
-          {messages.map((msg, i) => {
-            const prev = messages[i - 1]
-            const grouped = prev && prev.author_id === msg.author_id &&
-              (new Date(msg.created_at) - new Date(prev.created_at)) < 5 * 60 * 1000
-
-            const isMentioned = msg.mentions?.includes(currentUserId)
-
-            return (
-              <div
-                key={msg.id}
-                className={`px-4 hover:bg-[#2e3035] flex gap-3 ${grouped ? 'py-0.5' : 'py-2 mt-2'} ${isMentioned ? 'bg-[#3c3814] hover:bg-[#454020] border-l-2 border-[#f0b232]' : ''}`}
-              >
-                {!grouped ? (
-                  <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white text-sm font-bold shrink-0">
-                    {msg.author?.username?.slice(0, 2).toUpperCase() || '??'}
-                  </div>
-                ) : (
-                  <div className="w-10 shrink-0" />
-                )}
-                <div className="min-w-0 flex-1">
-                  {!grouped && (
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-white font-medium text-[15px]">{msg.author?.username || 'Utilisateur'}</span>
-                      <span className="text-xs text-[#949ba4]">{formatTime(msg.created_at)}</span>
-                    </div>
-                  )}
-                  <p className="text-[#dbdee1] text-[15px] break-words whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              </div>
-            )
-          })}
+          {displayed.map((msg, i) => (
+            <MessageItem
+              key={msg.id}
+              msg={msg}
+              prev={displayed[i - 1]}
+              currentUserId={currentUserId}
+              canModerate={canModerate}
+              reactions={reactions[msg.id]}
+              toggleReaction={toggleReaction}
+              onOpenThread={(m) => threads.openThread(m.id)}
+              onDmUser={onDmUser}
+              onEdited={() => {}}
+              onDeleted={() => {}}
+            />
+          ))}
         </div>
       </div>
 
-      <form onSubmit={handleSend} className="px-4 pb-6 pt-2 shrink-0">
+      {/* Aperçus de fichiers avant envoi */}
+      {pendingFiles.length > 0 && (
+        <div className="px-4 pt-2 flex gap-2 flex-wrap shrink-0">
+          {pendingFiles.map((p, i) => (
+            <div key={i} className="relative bg-[var(--bg-secondary)] rounded-lg p-1.5 pr-7 max-w-[180px]">
+              {p.type?.startsWith('image/') ? (
+                <img src={p.url} alt={p.name} className="h-20 rounded object-cover" />
+              ) : (
+                <div className="h-20 flex items-center justify-center text-3xl">📎</div>
+              )}
+              <span className="block text-xs text-[var(--text-muted)] truncate mt-1">{p.name}</span>
+              <button
+                onClick={() => removePending(i)}
+                className="absolute top-1 right-1 w-5 h-5 bg-[var(--bg-primary)] text-[var(--text-muted)] rounded-full text-xs flex items-center justify-center hover:text-[var(--danger)]"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleSend} className="px-4 pb-6 pt-2 shrink-0" data-ui-id="chat-input">
+        <div className="flex items-end gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-1">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-xl pb-1"
+            title="Joindre un fichier ou une image"
+          >
+            📎
+          </button>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={Math.min(4, Math.max(1, input.split('\n').length))}
+            placeholder={`Écrire dans #${channel.name}`}
+            className="flex-1 bg-transparent text-[var(--text-secondary)] resize-none outline-none py-2 text-[15px] placeholder-[var(--text-muted)] max-h-32"
+          />
+          {uploading && <span className="text-xs text-[var(--text-muted)] pb-1">Envoi…</span>}
+          {input.trim() && (
+            <button
+              type="submit"
+              className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-xl pb-1"
+              title="Envoyer"
+            >
+              ➤
+            </button>
+          )}
+        </div>
         <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={`Écrire dans #${channel.name}`}
-          className="w-full bg-[#383a40] text-white rounded-lg px-4 py-2.5 text-sm outline-none placeholder-[#6d6f78]"
+          ref={fileInputRef}
+          type="file"
+          multiple
+          hidden
+          onChange={(e) => {
+            handleFiles(e.target.files)
+            e.target.value = ''
+          }}
         />
       </form>
+
+      {threads.activeThread && (
+        <ThreadPanel
+          channel={channel}
+          threads={threads}
+          currentUserId={currentUserId}
+          canModerate={canModerate}
+          onDmUser={onDmUser}
+        />
+      )}
     </div>
   )
 }

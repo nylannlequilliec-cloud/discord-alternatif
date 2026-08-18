@@ -31,5 +31,17 @@ export function useChannels(serverId) {
     return { data, error }
   }
 
-  return { channels, loading, createChannel, refresh: fetchChannels }
+  const renameChannel = async (channelId, name) => {
+    const { error } = await supabase.from('channels').update({ name }).eq('id', channelId)
+    if (!error) await fetchChannels()
+    return { error }
+  }
+
+  const deleteChannel = async (channelId) => {
+    const { error } = await supabase.from('channels').delete().eq('id', channelId)
+    if (!error) await fetchChannels()
+    return { error }
+  }
+
+  return { channels, loading, createChannel, renameChannel, deleteChannel, refresh: fetchChannels }
 }

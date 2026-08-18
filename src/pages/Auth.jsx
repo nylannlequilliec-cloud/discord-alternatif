@@ -31,22 +31,20 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#313338] px-4">
-      <div className="w-full max-w-md bg-[#313338] rounded-lg p-8 shadow-2xl">
-        <div className="bg-[#2b2d31] rounded-lg p-8">
-          <h1 className="text-2xl font-bold text-white text-center mb-1">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] px-4">
+      <div className="w-full max-w-md bg-[var(--bg-primary)] rounded-lg p-8 shadow-2xl">
+        <div className="bg-[var(--bg-secondary)] rounded-lg p-8">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mb-1">
             {mode === 'login' ? 'Content de te revoir !' : 'Créer un compte'}
           </h1>
-          <p className="text-[#b5bac1] text-center text-sm mb-6">
-            {mode === 'login'
-              ? 'Content de te revoir, on t\'a manqué !'
-              : 'Rejoins ta communauté'}
+          <p className="text-[var(--text-muted)] text-center text-sm mb-6">
+            {mode === 'login' ? 'Content de te revoir, on t\'a manqué !' : 'Rejoins ta communauté'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-bold text-[#b5bac1] uppercase mb-2">
+                <label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-2">
                   Pseudo
                 </label>
                 <input
@@ -54,14 +52,14 @@ export default function Auth() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full bg-[#1e1f22] text-white rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5865f2]"
+                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   placeholder="TonPseudo"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-[#b5bac1] uppercase mb-2">
+              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-2">
                 Email
               </label>
               <input
@@ -69,12 +67,12 @@ export default function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-[#1e1f22] text-white rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5865f2]"
+                className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#b5bac1] uppercase mb-2">
+              <label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-2">
                 Mot de passe
               </label>
               <input
@@ -83,30 +81,30 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full bg-[#1e1f22] text-white rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5865f2]"
+                className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
 
             {error && (
-              <p className="text-[#fa777c] text-sm">{error}</p>
+              <p className="text-[var(--danger)] text-sm">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-medium rounded py-2.5 text-sm transition disabled:opacity-50"
+              className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium rounded py-2.5 text-sm transition disabled:opacity-50"
             >
               {loading ? '...' : mode === 'login' ? 'Connexion' : "S'inscrire"}
             </button>
           </form>
 
-          <p className="text-sm text-[#949ba4] mt-4">
+          <p className="text-sm text-[var(--text-muted)] mt-4">
             {mode === 'login' ? (
               <>
                 Besoin d'un compte ?{' '}
                 <button
                   onClick={() => setMode('signup')}
-                  className="text-[#00a8fc] hover:underline"
+                  className="text-[var(--text-link)] hover:underline"
                 >
                   S'inscrire
                 </button>
@@ -116,7 +114,7 @@ export default function Auth() {
                 Déjà un compte ?{' '}
                 <button
                   onClick={() => setMode('login')}
-                  className="text-[#00a8fc] hover:underline"
+                  className="text-[var(--text-link)] hover:underline"
                 >
                   Se connecter
                 </button>

@@ -1,16 +1,180 @@
 @import "tailwindcss";
 
+/* ============================================================
+   THÈMES — variables CSS (sombre par défaut, clair en option)
+   La couleur d'accent est pilotée par le JS (UIContext)
+   ============================================================ */
 :root {
   color-scheme: dark;
+  --bg-primary: #1e1f22;
+  --bg-secondary: #2b2d31;
+  --bg-tertiary: #313338;
+  --bg-input: #383a40;
+  --bg-hover: #35373c;
+  --bg-active: #404249;
+  --bg-userbar: #232428;
+  --bg-modal: #313338;
+  --bg-modal-inner: #2b2d31;
+  --bg-mention: #3c3814;
+  --bg-mention-hover: #454020;
+  --text-primary: #ffffff;
+  --text-secondary: #dbdee1;
+  --text-muted: #949ba4;
+  --text-faint: #80848e;
+  --text-link: #00a8fc;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-green: #23a55a;
+  --danger: #fa777c;
+  --warning: #f0b232;
+  --border: #26272b;
+  --scrollbar-thumb: #1a1b1e;
+  --shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-primary: #e3e5e8;
+  --bg-secondary: #ebedef;
+  --bg-tertiary: #ffffff;
+  --bg-input: #e6e8eb;
+  --bg-hover: #e3e5e8;
+  --bg-active: #d6d8db;
+  --bg-userbar: #ebedef;
+  --bg-modal: #ffffff;
+  --bg-modal-inner: #f2f3f5;
+  --bg-mention: #fdf5d8;
+  --bg-mention-hover: #f5e7b6;
+  --text-primary: #060607;
+  --text-secondary: #2e3035;
+  --text-muted: #4e5058;
+  --text-faint: #80848e;
+  --text-link: #0068e0;
+  --border: #d5d7da;
+  --scrollbar-thumb: #c8cacd;
+  --shadow-color: rgba(0, 0, 0, 0.15);
 }
 
 body {
   margin: 0;
   font-family: 'gg sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: #1e1f22;
-  color: #dbdee1;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
 }
 
-::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+/* ============================================================
+   ÉDITEUR D'UI — mode édition
+   ============================================================ */
+.ui-editmode [data-ui-id] {
+  outline: 2px dashed var(--accent);
+  outline-offset: 1px;
+  cursor: move;
+}
+
+.ui-editmode [data-ui-id].ui-selected {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent);
+}
+
+.ui-resize-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border: 2px solid var(--bg-primary);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  z-index: 60;
+}
+
+.ui-edit-toolbar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-modal);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-shadow: 0 8px 24px var(--shadow-color);
+}
+
+/* ============================================================
+   DIVERS
+   ============================================================ */
+.msg-hover-actions {
+  position: absolute;
+  right: 12px;
+  top: -14px;
+  display: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  z-index: 40;
+}
+
+.group:hover .msg-hover-actions { display: flex; }
+
+.reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.reaction-pill:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.reaction-pill.reacted {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+  color: var(--text-secondary);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.emoji-grid button {
+  font-size: 20px;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.emoji-grid button:hover { background: var(--bg-hover); }
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+input[type="color"] {
+  width: 36px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}

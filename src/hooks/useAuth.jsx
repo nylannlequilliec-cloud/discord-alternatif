@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -7,6 +7,19 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  const fetchProfile = useCallback(async (userId) => {
+    if (!userId) {
+      setProfile(null)
+      return
+    }
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    setProfile(data)
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,17 +35,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (!session?.user) {
-      setProfile(null)
-      return
-    }
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => setProfile(data))
-  }, [session])
+    fetchProfile(session?.user?.id)
+  }, [session, fetchProfile])
 
   const signUp = async (email, password, username) => {
     const { data, error } = await supabase.auth.signUp({
@@ -53,7 +57,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signUp, signIn, signOut, refreshProfile: () => fetchProfile(session?.user?.id) }}>
       {children}
     </AuthContext.Provider>
   )

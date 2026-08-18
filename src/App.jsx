@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from './hooks/useAuth'
+import { UIProvider } from './context/UIContext'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
 
@@ -7,7 +8,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#313338] text-white">
+      <div className="h-screen w-screen flex items-center justify-center bg-[var(--bg-primary)] text-white">
         Chargement...
       </div>
     )
@@ -19,7 +20,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <UIProvider>
+        <AppContent />
+      </UIProvider>
     </AuthProvider>
   )
 }

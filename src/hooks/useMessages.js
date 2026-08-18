@@ -1,37 +1,64 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { safeQuery } from './useSchema'
 
 export function useMessages(channelId) {
-  const { session, profile } = useAuth()
+  const { session } = useAuth()
   const [messages, setMessages] = useState([])
+  const [reactions, setReactions] = useState({}) // messageId -> [reaction]
   const [loading, setLoading] = useState(true)
   const channelRef = useRef(null)
 
   const fetchMessages = useCallback(async () => {
     if (!channelId) return
     setLoading(true)
-    const { data } = await supabase
-      .from('messages')
-      .select('*, author:profiles(id, username, avatar_url)')
-      .eq('channel_id', channelId)
-      .order('created_at', { ascending: true })
-      .limit(200)
+    const { data } = await safeQuery(
+      supabase
+        .from('messages')
+        .select('*, author:profiles(id, username, avatar_url)')
+        .eq('channel_id', channelId)
+        .is('thread_id', null)
+        .order('created_at', { ascending: true })
+        .limit(300)
+    )
     setMessages(data || [])
     setLoading(false)
   }, [channelId])
+
+  // Charge les réactions de tous les messages du salon en une requête
+  const fetchReactions = useCallback(async () => {
+    if (!channelId) return
+    const { data } = await safeQuery(
+      supabase
+        .from('reactions')
+        .select('message_id, emoji, user_id, user:profiles(username)')
+        .in(
+          'message_id',
+          messages.map((m) => m.id)
+        )
+    )
+    const map = {}
+    for (const r of data || []) {
+      if (!map[r.message_id]) map[r.message_id] = []
+      map[r.message_id].push(r)
+    }
+    setReactions(map)
+  }, [channelId, messages])
 
   useEffect(() => {
     fetchMessages()
   }, [fetchMessages])
 
-  // Abonnement temps réel : nouveaux messages dans ce salon
+  useEffect(() => {
+    if (messages.length) fetchReactions()
+    else setReactions({})
+  }, [messages, fetchReactions])
+
+  // Abonnement temps réel : nouveaux messages + réactions
   useEffect(() => {
     if (!channelId) return
-
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-    }
+    if (channelRef.current) supabase.removeChannel(channelRef.current)
 
     const sub = supabase
       .channel(`messages:${channelId}`)
@@ -39,35 +66,43 @@ export function useMessages(channelId) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` },
         async (payload) => {
-          // On récupère l'auteur pour l'afficher correctement
-          const { data: author } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .eq('id', payload.new.author_id)
-            .single()
+          if (payload.new.thread_id) return // les réponses de fils sont gérées par useThreads
+          const { data: author } = await safeQuery(
+            supabase.from('profiles').select('id, username, avatar_url').eq('id', payload.new.author_id).single()
+          )
           setMessages((prev) => [...prev, { ...payload.new, author }])
         }
       )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, (payload) => {
+        setMessages((prev) => prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m)))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, (payload) => {
+        setMessages((prev) => prev.filter((m) => m.id !== payload.old.id))
+      })
       .subscribe()
 
     channelRef.current = sub
 
+    const reactionsSub = supabase
+      .channel(`reactions:${channelId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, () => fetchReactions())
+      .subscribe()
+
     return () => {
       supabase.removeChannel(sub)
+      supabase.removeChannel(reactionsSub)
     }
-  }, [channelId])
+  }, [channelId, fetchReactions])
 
-  const sendMessage = async (content) => {
-    if (!session?.user || !content.trim()) return
+  const sendMessage = async (content, attachments = []) => {
+    if (!session?.user || !content.trim()) return { error: null }
 
-    // Détection simple des mentions @pseudo
     const mentionMatches = [...content.matchAll(/@(\w+)/g)].map((m) => m[1])
     let mentionIds = []
     if (mentionMatches.length > 0) {
-      const { data: mentionedUsers } = await supabase
-        .from('profiles')
-        .select('id, username')
-        .in('username', mentionMatches)
+      const { data: mentionedUsers } = await safeQuery(
+        supabase.from('profiles').select('id, username').in('username', mentionMatches)
+      )
       mentionIds = (mentionedUsers || []).map((u) => u.id)
     }
 
@@ -76,9 +111,35 @@ export function useMessages(channelId) {
       author_id: session.user.id,
       content: content.trim(),
       mentions: mentionIds,
+      attachments,
     })
     return { error }
   }
 
-  return { messages, loading, sendMessage }
+  const editMessage = async (messageId, content) => {
+    const { error } = await supabase
+      .from('messages')
+      .update({ content, edited_at: new Date().toISOString() })
+      .eq('id', messageId)
+    return { error }
+  }
+
+  const deleteMessage = async (messageId) => {
+    const { error } = await supabase.from('messages').delete().eq('id', messageId)
+    return { error }
+  }
+
+  const toggleReaction = async (messageId, emoji) => {
+    if (!session?.user) return
+    const list = reactions[messageId] || []
+    const mine = list.find((r) => r.user_id === session.user.id && r.emoji === emoji)
+    if (mine) {
+      await supabase.from('reactions').delete().eq('message_id', messageId).eq('user_id', session.user.id).eq('emoji', emoji)
+    } else {
+      await supabase.from('reactions').insert({ message_id: messageId, user_id: session.user.id, emoji })
+    }
+    fetchReactions()
+  }
+
+  return { messages, reactions, loading, sendMessage, editMessage, deleteMessage, toggleReaction }
 }

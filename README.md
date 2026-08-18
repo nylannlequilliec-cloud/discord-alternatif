@@ -1,61 +1,95 @@
-# Discord Alternatif — V1
+# Discord Alternatif — V2
 
-Une V1 fonctionnelle : comptes, serveurs, salons textuels, chat en temps réel, mentions/notifications.
+Un Discord alternatif complet : comptes, serveurs, salons textuels **et vocaux**, chat en temps réel, **messages privés**, fils de discussion, réactions, rôles & modération, uploads d'images/fichiers, recherche, notifications, **interface 100 % personnalisable** (déplacer, redimensionner, opacité, ombre…). Tout en français. Budget : 0 €.
 
-## 🚀 Mise en route (tout se fait dans le navigateur, aucune install nécessaire)
+## 🚀 Mise en route (tout se fait dans le navigateur)
 
-### 1. Configurer Supabase (la base de données)
+### 1. Base de données (Supabase)
 
-1. Va sur [supabase.com](https://supabase.com) → connecte-toi à ton projet existant (ou crée-en un nouveau, c'est gratuit)
-2. Dans le menu de gauche, clique sur **SQL Editor**
-3. Clique sur **New query**
-4. Ouvre le fichier `supabase/schema.sql` de ce repo, copie **tout** son contenu
-5. Colle-le dans l'éditeur SQL de Supabase, puis clique sur **Run**
-6. Ça va créer toutes les tables (profils, serveurs, salons, messages, notifications) avec la sécurité (RLS) déjà configurée
+1. Va sur [supabase.com](https://supabase.com) → ton projet existant
+2. Menu de gauche → **SQL Editor** → **New query**
+3. Ouvre `supabase/schema.sql` du repo, copie tout, colle, **Run** *(déjà fait si tu avais la V1)*
+4. **Mise à jour V2** : ouvre `supabase/schema_v2.sql`, copie tout, colle, **Run**
+   → active : messages privés, fils, réactions, modération (ban/mute), uploads, notifications push
 
-### 2. Récupérer tes clés Supabase
+### 2. Clés Supabase
 
-1. Dans Supabase, va dans **Project Settings** (icône engrenage) → **API**
-2. Note deux valeurs :
-   - **Project URL** (ex: `https://xxxxx.supabase.co`)
-   - **anon public key** (une longue chaîne de caractères)
+**Project Settings** ⚙️ → **API** :
+- **Project URL** → variable `VITE_SUPABASE_URL`
+- **anon public key** → variable `VITE_SUPABASE_ANON_KEY`
 
-### 3. Déployer sur Vercel
+### 3. Déploiement (Vercel)
 
-1. Va sur [vercel.com](https://vercel.com), connecte-toi avec ton compte GitHub
-2. Clique sur **Add New → Project**
-3. Choisis le repo `discord-alternatif`
-4. Avant de cliquer sur Deploy, ouvre **Environment Variables** et ajoute :
-   - `VITE_SUPABASE_URL` = ton Project URL Supabase
-   - `VITE_SUPABASE_ANON_KEY` = ta clé anon public
-5. Clique sur **Deploy**
-6. Au bout de 1-2 minutes, Vercel te donne un lien (ex: `discord-alternatif.vercel.app`) — c'est ton app, en ligne, utilisable par tes potes !
+1. Le repo est déjà lié à Vercel : **chaque push sur `main` déploie automatiquement**
+2. Dans Vercel → projet → **Settings → Environment Variables**, ajoute :
 
-### 4. Activer l'auth email dans Supabase
+| Variable | Où la trouver |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase → Settings → API |
+| `VITE_SUPABASE_ANON_KEY` | Supabase → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` (secrète !) — **requis pour les push** |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Générées à l'étape 5 (push) |
+| `WEBHOOK_SECRET` | Un mot de passe de ton choix (ex: `mon-secret-2026`) |
+| `LIVEKIT_URL` | LiveKit Cloud (étape 6) — ex: `wss://xxx.livekit.cloud` |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | LiveKit Cloud → Settings |
 
-1. Dans Supabase, va dans **Authentication → Providers**
-2. Vérifie que **Email** est activé (c'est le cas par défaut)
-3. Optionnel : dans **Authentication → Settings**, tu peux désactiver "Confirm email" si tu veux que les comptes soient utilisables sans cliquer sur un lien de confirmation (plus simple pour un petit groupe entre potes)
+> Sans ces variables, l'app fonctionne quand même : seuls le vocal et les push restent inactifs (message d'info en français affiché).
 
-## ✅ Ce qui fonctionne dans cette V1
+### 4. Auth email
 
-- Inscription / connexion par email
-- Créer un serveur, inviter des amis via code
-- Rejoindre un serveur avec un code d'invitation
-- Créer des salons textuels
-- Chat en temps réel (les messages apparaissent instantanément chez tout le monde)
-- Mentions `@pseudo` avec notification (visuel highlight du message pour l'instant)
-- Liste des membres par serveur
+Supabase → **Authentication → Providers** → **Email** activé (défaut). Optionnel : désactive « Confirm email » pour un petit groupe.
 
-## 🔜 Prochaines étapes (V1.5 et V2)
+### 5. Notifications push (facultatif, 5 min)
 
-- V1.5 : éditeur d'interface personnalisable (déplacer/redimensionner/régler l'opacité des éléments UI)
-- V2 : salons vocaux (via LiveKit), partage d'écran, upload d'images, rôles/permissions
+1. Génère tes clés VAPID :
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. Mets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` dans les variables Vercel (étape 3), puis redéploie
+3. Ajoute `VITE_VAPID_PUBLIC_KEY` = la clé publique VAPID (celle avec `VITE_` est publique et va dans le bundle)
+4. Supabase → **Database → Webhooks** → **Create a webhook** (×2) :
+   - Table `messages`, event **INSERT**, URL `https://TON-SITE.vercel.app/api/push`, header `x-webhook-secret: TON-SECRET`
+   - Table `dm_messages`, event **INSERT**, même URL, même header
+5. Dans l'app : Paramètres ⚙️ → Notifications → « Activer les notifications »
 
-## 🛠 Dev local (si un jour tu as un PC sous la main)
+### 6. Salons vocaux + partage d'écran (facultatif, 10 min, gratuit)
+
+1. Va sur [livekit.io](https://livekit.io) → **LiveKit Cloud** → crée un projet gratuit (10 000 min/mois)
+2. Settings → copie `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` → variables Vercel (étape 3)
+3. Redéploie. Les salons vocaux (type `voice`) deviennent actifs avec micro, caméra et partage d'écran
+
+## ✅ Fonctionnalités V2
+
+- Inscription / connexion par email, pseudo, photo de profil, statut (en ligne/absent/ne pas déranger/hors ligne)
+- Serveurs + codes d'invitation, salons textuels (créer/renommer/supprimer par les admins)
+- Chat temps réel : mentions `@pseudo`, édition, suppression, pièces jointes (images + fichiers)
+- Messages privés (DM) avec badge de non-lus, accessibles depuis les membres
+- Fils de discussion (threads) + réactions aux emojis
+- Rôles : propriétaire 👑 / admin 🛡️ / membre ; modération : bannir, rendre muet, expulser, supprimer les messages d'un membre
+- Recherche dans le salon
+- Salons vocaux + caméra + partage d'écran (LiveKit)
+- Notifications : cloche 🔔 en temps réel (mentions + DM) + push navigateur
+- **Éditeur d'interface** 🎨 : bouton en bas à gauche → mode édition → clique sur un élément, déplace-le, redimensionne-le (poignée), règle opacité, ombre, coins arrondis, fond, échelle, taille du texte… Sauvegardé automatiquement par utilisateur
+- Thèmes sombre/clair + couleur d'accent personnalisable
+
+## 🔜 Idées V3
+
+- Invitations avec expiration, salons privés par rôle
+- Statut « en train d'écrire… », accusés de lecture
+- App mobile (PWA installable)
+
+## 🛠 Dev local
 
 ```bash
 npm install
-cp .env.example .env   # puis remplis avec tes clés Supabase
-npm run dev
+cp .env.example .env   # remplis avec tes clés Supabase
+npm run dev            # http://localhost:5173
+npm run build          # build de prod
+npm run lint           # oxlint
 ```
+
+## 🔒 Sécurité
+
+- Toutes les données passent par Supabase avec **Row Level Security** : chacun ne voit que ce qu'il doit voir
+- Les clés `service_role`, VAPID privées et LiveKit secrets ne doivent **jamais** être commitées (`.gitignore` les protège)
+- Le webhook `/api/push` vérifie un secret (`WEBHOOK_SECRET`) avant d'envoyer quoi que ce soit
