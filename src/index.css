@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: 'gg sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #1e1f22;
+  color: #dbdee1;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
