@@ -101,7 +101,7 @@ export default function Home() {
       {v2 === false && !v2BannerDismissed && (
         <div className="fixed top-0 inset-x-0 z-[95] bg-[var(--warning)] text-[var(--bg-primary)] text-xs font-medium px-4 py-2 flex items-center justify-center gap-3">
           <span>
-            🔧 Mise à jour en attente : exécute <code className="font-bold">supabase/schema_v2.sql</code> dans Supabase
+            🔧 Mise à jour en attente : exécute <code className="font-bold">supabase/schema.sql</code> dans Supabase
             (SQL Editor) pour activer DM, fils, réactions, modération et uploads. Voir le README.
           </span>
           <button onClick={() => setV2BannerDismissed(true)} className="font-bold hover:opacity-70">✕</button>

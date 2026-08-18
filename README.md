@@ -8,9 +8,9 @@ Un Discord alternatif complet : comptes, serveurs, salons textuels **et vocaux**
 
 1. Va sur [supabase.com](https://supabase.com) → ton projet existant
 2. Menu de gauche → **SQL Editor** → **New query**
-3. Ouvre `supabase/schema.sql` du repo, copie tout, colle, **Run** *(déjà fait si tu avais la V1)*
-4. **Mise à jour V2** : ouvre `supabase/schema_v2.sql`, copie tout, colle, **Run**
-   → active : messages privés, fils, réactions, modération (ban/mute), uploads, notifications push
+3. Ouvre `supabase/schema.sql` du repo, **copie tout**, colle, **Run**
+
+> ℹ️ **Il n'y a qu'UN SEUL fichier SQL** (`schema.sql`), il contient tout (comptes, serveurs, salons, messages, DM, fils, réactions, modération, uploads, push). Il est **sûr à relancer** : si tu le ré-exécutes plus tard après une mise à jour, rien ne casse.
 
 ### 2. Clés Supabase
 
