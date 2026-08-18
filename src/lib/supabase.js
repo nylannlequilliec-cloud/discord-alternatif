@@ -9,4 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+// Debug temporaire : affiche dans la console du navigateur l'URL réellement utilisée.
+// A retirer une fois le bug résolu.
+if (typeof window !== 'undefined') {
+  console.log('[DEBUG] VITE_SUPABASE_URL =', JSON.stringify(supabaseUrl))
+  console.log('[DEBUG] VITE_SUPABASE_ANON_KEY présente =', Boolean(supabaseAnonKey))
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
