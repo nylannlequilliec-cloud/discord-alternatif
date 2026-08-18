@@ -66,14 +66,6 @@ create table if not exists public.servers (
 
 alter table public.servers enable row level security;
 
-drop policy if exists "Un user voit les serveurs dont il est membre" on public.servers;
-create policy "Un user voit les serveurs dont il est membre"
-  on public.servers for select
-  to authenticated
-  using (
-    id in (select server_id from public.server_members where user_id = auth.uid())
-  );
-
 drop policy if exists "Un user connecté peut créer un serveur" on public.servers;
 create policy "Un user connecté peut créer un serveur"
   on public.servers for insert
@@ -116,6 +108,22 @@ create table if not exists public.server_members (
 
 alter table public.server_members enable row level security;
 
+-- Colonne mute : nécessaire aussi si la table existait déjà (V1)
+alter table public.server_members add column if not exists muted_until timestamptz;
+
+-- La table bans est créée ICI (avant les policies qui la référencent)
+-- pour que le script fonctionne aussi sur une base neuve.
+create table if not exists public.bans (
+  server_id uuid references public.servers(id) on delete cascade,
+  user_id uuid references public.profiles(id) on delete cascade,
+  banned_by uuid references public.profiles(id),
+  reason text,
+  created_at timestamptz default now(),
+  primary key (server_id, user_id)
+);
+
+alter table public.bans enable row level security;
+
 drop policy if exists "Un membre voit les membres de ses serveurs" on public.server_members;
 create policy "Un membre voit les membres de ses serveurs"
   on public.server_members for select
@@ -142,6 +150,16 @@ create policy "Un user peut quitter un serveur"
   on public.server_members for delete
   to authenticated
   using (user_id = auth.uid());
+
+-- Policy de lecture des serveurs : définie ici car elle référence
+-- server_members (qui vient d'être créée) — base neuve compatible.
+drop policy if exists "Un user voit les serveurs dont il est membre" on public.servers;
+create policy "Un user voit les serveurs dont il est membre"
+  on public.servers for select
+  to authenticated
+  using (
+    id in (select server_id from public.server_members where user_id = auth.uid())
+  );
 
 -- ------------------------------------------------------------
 -- 4. SALONS (channels)
@@ -243,6 +261,9 @@ create table if not exists public.notifications (
   read boolean default false,
   created_at timestamptz default now()
 );
+
+-- Colonne type : nécessaire aussi si la table existait déjà (V1)
+alter table public.notifications add column if not exists type text default 'mention';
 
 alter table public.notifications enable row level security;
 
@@ -475,19 +496,10 @@ create policy "reactions: retirer sa réaction"
   using (user_id = auth.uid());
 
 -- ------------------------------------------------------------
--- 10. MODÉRATION : BANS
+-- 10. MODÉRATION : POLICIES DES BANS
+-- (la table bans a été créée en section 3, avant les policies
+--  de server_members et messages qui la référencent)
 -- ------------------------------------------------------------
-create table if not exists public.bans (
-  server_id uuid references public.servers(id) on delete cascade,
-  user_id uuid references public.profiles(id) on delete cascade,
-  banned_by uuid references public.profiles(id),
-  reason text,
-  created_at timestamptz default now(),
-  primary key (server_id, user_id)
-);
-
-alter table public.bans enable row level security;
-
 drop policy if exists "bans: voir (admin/owner)" on public.bans;
 create policy "bans: voir (admin/owner)"
   on public.bans for select
