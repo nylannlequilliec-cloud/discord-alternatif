@@ -88,12 +88,7 @@ export default function Auth() {
             </div>
 
             {error && (
-              <div className="text-[#fa777c] text-sm space-y-1">
-                <p>{error}</p>
-                <p className="text-xs opacity-70 break-all">
-                  Debug — URL Supabase utilisée : {import.meta.env.VITE_SUPABASE_URL || '(vide)'}
-                </p>
-              </div>
+              <p className="text-[#fa777c] text-sm">{error}</p>
             )}
 
             <button
