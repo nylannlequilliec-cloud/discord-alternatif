@@ -4,15 +4,27 @@ export default function ServerBar({ servers, activeServerId, onSelectServer, onC
   const [showModal, setShowModal] = useState(false)
   const [modalMode, setModalMode] = useState('create') // 'create' | 'join'
   const [inputValue, setInputValue] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async () => {
     if (!inputValue.trim()) return
-    if (modalMode === 'create') {
-      await onCreateServer(inputValue.trim())
-    } else {
-      await onJoinServer(inputValue.trim())
+    setError('')
+    setSubmitting(true)
+
+    const result = modalMode === 'create'
+      ? await onCreateServer(inputValue.trim())
+      : await onJoinServer(inputValue.trim())
+
+    setSubmitting(false)
+
+    if (result?.error) {
+      setError(typeof result.error === 'string' ? result.error : result.error.message || 'Une erreur est survenue')
+      return
     }
+
     setInputValue('')
+    setError('')
     setShowModal(false)
   }
 
@@ -54,7 +66,7 @@ export default function ServerBar({ servers, activeServerId, onSelectServer, onC
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => { setShowModal(false); setError('') }}>
           <div className="bg-[#313338] rounded-lg p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-white font-bold text-lg mb-1">
               {modalMode === 'create' ? 'Créer un serveur' : 'Rejoindre un serveur'}
@@ -68,17 +80,19 @@ export default function ServerBar({ servers, activeServerId, onSelectServer, onC
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               placeholder={modalMode === 'create' ? 'Mon serveur' : 'ex: a1b2c3d4'}
-              className="w-full bg-[#1e1f22] text-white rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5865f2] mb-4"
+              className="w-full bg-[#1e1f22] text-white rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#5865f2] mb-2"
             />
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="text-sm text-white hover:underline">
+            {error && <p className="text-[#fa777c] text-sm mb-2">{error}</p>}
+            <div className="flex justify-end gap-3 mt-2">
+              <button onClick={() => { setShowModal(false); setError('') }} className="text-sm text-white hover:underline">
                 Annuler
               </button>
               <button
                 onClick={handleSubmit}
-                className="bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-medium rounded px-4 py-2"
+                disabled={submitting}
+                className="bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-medium rounded px-4 py-2 disabled:opacity-50"
               >
-                {modalMode === 'create' ? 'Créer' : 'Rejoindre'}
+                {submitting ? '...' : modalMode === 'create' ? 'Créer' : 'Rejoindre'}
               </button>
             </div>
           </div>
