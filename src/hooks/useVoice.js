@@ -15,8 +15,6 @@ export function useVoice() {
     connecting: false,
   })
 
-  const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL
-
   const syncParticipants = useCallback(() => {
     const room = roomRef.current
     if (!room) return
@@ -55,7 +53,22 @@ export function useVoice() {
 
   const join = useCallback(
     async (channel) => {
-      if (!LIVEKIT_URL) {
+      // L'URL LiveKit est fournie par le serveur (GET /api/livekit-token)
+      let livekitUrl = null
+      try {
+        const res = await fetch('/api/livekit-token')
+        if (res.ok) {
+          const info = await res.json()
+          livekitUrl = info.url || null
+          if (!info.configured) {
+            setRoomState((s) => ({ ...s, configMissing: true, channel }))
+            return { error: { message: 'LiveKit non configuré' } }
+          }
+        }
+      } catch {
+        /* serveur injoignable */
+      }
+      if (!livekitUrl) {
         setRoomState((s) => ({ ...s, configMissing: true, channel }))
         return { error: { message: 'LiveKit non configuré' } }
       }
@@ -88,7 +101,7 @@ export function useVoice() {
           setRoomState((s) => ({ ...s, connected: false, channel: null, participants: [] }))
         })
 
-        await room.connect(LIVEKIT_URL, token)
+        await room.connect(livekitUrl, token)
         await room.localParticipant.setMicrophoneEnabled(true)
         setRoomState((s) => ({ ...s, connected: true, connecting: false }))
         syncParticipants()
@@ -99,7 +112,7 @@ export function useVoice() {
         return { error: { message: e.message || 'Erreur vocale' } }
       }
     },
-    [LIVEKIT_URL, session, syncParticipants, leave]
+    [session, syncParticipants, leave]
   )
 
   const toggleMute = useCallback(async () => {

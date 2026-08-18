@@ -5,7 +5,10 @@ import { AccessToken } from 'livekit-server-sdk'
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    return res.status(200).json({ configured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) })
+    return res.status(200).json({
+      configured: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET),
+      url: process.env.LIVEKIT_URL || null,
+    })
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST uniquement' })

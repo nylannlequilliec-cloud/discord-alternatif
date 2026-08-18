@@ -34,6 +34,7 @@ Un Discord alternatif complet : comptes, serveurs, salons textuels **et vocaux**
 | `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | LiveKit Cloud → Settings |
 
 > Sans ces variables, l'app fonctionne quand même : seuls le vocal et les push restent inactifs (message d'info en français affiché).
+> ℹ️ Plus besoin de `VITE_LIVEKIT_URL` : le navigateur récupère l'URL LiveKit depuis l'API (`/api/livekit-token`).
 
 ### 4. Auth email
 
