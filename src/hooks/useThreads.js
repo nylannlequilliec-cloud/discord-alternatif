@@ -41,6 +41,20 @@ export function useThreads(channelId) {
     }
   }, [channelId, fetchThreads])
 
+  // Attention à l'ORDRE : loadReplies doit être déclaré AVANT l'effet temps réel
+  // qui le référence dans ses dépendances (sinon erreur TDZ au rendu)
+  const loadReplies = useCallback(async (parentId) => {
+    const { data } = await safeQuery(
+      supabase
+        .from('messages')
+        .select('*, author:profiles(id, username, avatar_url)')
+        .eq('thread_id', parentId)
+        .order('created_at', { ascending: true })
+        .limit(200)
+    )
+    setReplies(data || [])
+  }, [])
+
   // Temps réel : une nouvelle réponse = le fil remonte
   useEffect(() => {
     if (!channelId) return
@@ -59,18 +73,6 @@ export function useThreads(channelId) {
       .subscribe()
     return () => supabase.removeChannel(sub)
   }, [channelId, activeThread, fetchThreads, loadReplies])
-
-  const loadReplies = useCallback(async (parentId) => {
-    const { data } = await safeQuery(
-      supabase
-        .from('messages')
-        .select('*, author:profiles(id, username, avatar_url)')
-        .eq('thread_id', parentId)
-        .order('created_at', { ascending: true })
-        .limit(200)
-    )
-    setReplies(data || [])
-  }, [])
 
   const openThread = useCallback(
     async (parentId) => {

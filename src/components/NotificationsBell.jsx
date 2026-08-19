@@ -83,10 +83,10 @@ export default function NotificationsBell({ onOpenDm, onOpenMention }) {
 
   const handleClick = async (item) => {
     setOpen(false)
-    if (item.meta.kind === 'dm') {
+    if (item.meta?.kind === 'dm') {
       await supabase.from('notifications').update({ read: true }).eq('id', item.id)
       onOpenDm?.(item.meta.author.id)
-    } else if (item.meta.channel) {
+    } else if (item.meta?.channel) {
       await supabase.from('notifications').update({ read: true }).eq('id', item.id)
       onOpenMention?.(item.meta.channel.server_id, item.meta.channel.id)
     }

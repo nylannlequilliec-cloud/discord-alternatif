@@ -124,19 +124,8 @@ export function useDMs() {
     }
   }, [activeId])
 
-  const openConversation = useCallback(
-    async (otherUserId) => {
-      if (!me) return { error: 'Non connecté' }
-      const { data, error } = await supabase.rpc('get_or_create_dm', { other_user_id: otherUserId })
-      if (error) return { error }
-      setActiveId(data)
-      await fetchConversations()
-      await markRead(data)
-      return { data }
-    },
-    [me, fetchConversations, markRead]
-  )
-
+  // Attention à l'ORDRE : markRead doit être déclaré AVANT openConversation
+  // (qui le référence dans ses dépendances useCallback — sinon erreur TDZ au rendu)
   const markRead = useCallback(
     async (conversationId) => {
       if (!me) return
@@ -156,6 +145,19 @@ export function useDMs() {
       }
     },
     [me, fetchUnread]
+  )
+
+  const openConversation = useCallback(
+    async (otherUserId) => {
+      if (!me) return { error: 'Non connecté' }
+      const { data, error } = await supabase.rpc('get_or_create_dm', { other_user_id: otherUserId })
+      if (error) return { error }
+      setActiveId(data)
+      await fetchConversations()
+      await markRead(data)
+      return { data }
+    },
+    [me, fetchConversations, markRead]
   )
 
   const sendMessage = useCallback(
