@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { Bell } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { safeQuery } from '../hooks/useSchema'
@@ -98,10 +99,10 @@ export default function NotificationsBell({ onOpenDm, onOpenMention }) {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-11 h-11 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] flex items-center justify-center text-lg transition-all relative"
+        className="w-11 h-11 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] flex items-center justify-center transition-all relative"
         title="Notifications"
       >
-        🔔
+        <Bell size={20} />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-[var(--danger)] text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
             {unread > 9 ? '9+' : unread}

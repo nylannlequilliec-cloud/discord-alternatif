@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus, Pencil, Trash2, Settings, Paintbrush, LogOut, Volume2, VolumeX, MessageSquareText } from 'lucide-react'
 import { STATUS_COLORS } from './NotificationsBell'
 
 export default function ChannelSidebar({
@@ -68,8 +69,8 @@ export default function ChannelSidebar({
           <div className="flex items-center justify-between px-2 mb-1">
             <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">Salons textuels</span>
             {isAdmin && (
-              <button onClick={() => setShowModal('create')} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-lg leading-none">
-                +
+              <button onClick={() => setShowModal('create')} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                <Plus size={16} />
               </button>
             )}
           </div>
@@ -94,17 +95,17 @@ export default function ChannelSidebar({
                       setNewChannelName(c.name)
                       setShowModal('rename')
                     }}
-                    className="w-6 h-6 flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)] rounded"
+                    className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)] rounded"
                     title="Renommer"
                   >
-                    ✏️
+                    <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => handleDeleteChannel(c.id, c.name)}
-                    className="w-6 h-6 flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--bg-active)] rounded"
+                    className="w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--bg-active)] rounded"
                     title="Supprimer"
                   >
-                    🗑️
+                    <Trash2 size={13} />
                   </button>
                 </div>
               )}
@@ -121,7 +122,11 @@ export default function ChannelSidebar({
               const connected = voiceChannelId === c.id
               return (
                 <div key={c.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded text-sm text-[var(--text-muted)] hover:bg-[var(--bg-hover)]">
-                  <span>{connected ? '🔊' : '🔇'}</span>
+                  {connected ? (
+                    <Volume2 size={16} className="text-[var(--accent-green)] shrink-0" />
+                  ) : (
+                    <VolumeX size={16} className="shrink-0" />
+                  )}
                   <span className="truncate flex-1">{c.name}</span>
                   <button
                     onClick={() => onJoinVoice(c)}
@@ -150,7 +155,7 @@ export default function ChannelSidebar({
                 onClick={() => onOpenThread(t.id)}
                 className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-sm text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]"
               >
-                <span>🧵</span>
+                <MessageSquareText size={14} className="shrink-0" />
                 <span className="truncate">{t.content.slice(0, 30) || 'Fil'}</span>
               </button>
             ))}
@@ -173,18 +178,18 @@ export default function ChannelSidebar({
           />
         </div>
         <span className="text-sm text-[var(--text-primary)] font-medium truncate flex-1">{profile?.username}</span>
-        <button onClick={onOpenSettings} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm px-1" title="Paramètres">
-          ⚙️
+        <button onClick={onOpenSettings} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1" title="Paramètres">
+          <Settings size={16} />
         </button>
         <button
           onClick={onToggleEditMode}
-          className={`text-sm px-1 ${editMode ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+          className={`p-1 ${editMode ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
           title="Mode édition de l'interface (déplacer, redimensionner, opacité…)"
         >
-          🎨
+          <Paintbrush size={16} />
         </button>
-        <button onClick={onSignOut} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm px-1" title="Déconnexion">
-          ⏻
+        <button onClick={onSignOut} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1" title="Déconnexion">
+          <LogOut size={16} />
         </button>
       </div>
 

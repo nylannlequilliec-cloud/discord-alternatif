@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { Paperclip } from 'lucide-react'
 import { useDMs } from '../hooks/useDMs'
 import { useAuth } from '../hooks/useAuth'
 
@@ -74,7 +75,7 @@ export default function DMPanel({ onOpenConversation, dms: dmsProp }) {
       <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] min-w-0">
         {!dms.activeId || !activeConv ? (
           <div className="flex-1 flex items-center justify-center text-[var(--text-muted)] text-sm px-6 text-center">
-            Sélectionne une conversation, ou clique sur le bouton 💬 d'un membre pour lui écrire
+            Sélectionne une conversation, ou clique sur le bouton « Message privé » d'un membre pour lui écrire
           </div>
         ) : (
           <>
@@ -139,7 +140,7 @@ export default function DMPanel({ onOpenConversation, dms: dmsProp }) {
                             </a>
                           ) : (
                             <a key={i} href={att.url} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-2 bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm rounded px-3 py-2">
-                              📎 <span className="truncate">{att.name}</span>
+                              <Paperclip size={13} /> <span className="truncate">{att.name}</span>
                             </a>
                           )
                         )}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MessageSquare, Plus, Compass } from 'lucide-react'
 import NotificationsBell from './NotificationsBell'
 
 export default function ServerBar({
@@ -47,7 +48,7 @@ export default function ServerBar({
         }`}
         title="Messages privés"
       >
-        💬
+        <MessageSquare size={22} />
         {dmUnread > 0 && (
           <span className="absolute -top-1 -right-1 bg-[var(--danger)] text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
             {dmUnread > 9 ? '9+' : dmUnread}
@@ -83,10 +84,10 @@ export default function ServerBar({
           setModalMode('create')
           setShowModal(true)
         }}
-        className="w-12 h-12 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--accent-green)] text-[var(--accent-green)] hover:text-white flex items-center justify-center text-2xl transition-all"
+        className="w-12 h-12 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--accent-green)] text-[var(--accent-green)] hover:text-white flex items-center justify-center transition-all"
         title="Créer un serveur"
       >
-        +
+        <Plus size={24} />
       </button>
 
       <button
@@ -94,10 +95,10 @@ export default function ServerBar({
           setModalMode('join')
           setShowModal(true)
         }}
-        className="w-12 h-12 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--accent-green)] text-[var(--accent-green)] hover:text-white flex items-center justify-center text-lg transition-all"
+        className="w-12 h-12 rounded-3xl bg-[var(--bg-tertiary)] hover:rounded-2xl hover:bg-[var(--accent-green)] text-[var(--accent-green)] hover:text-white flex items-center justify-center transition-all"
         title="Rejoindre un serveur"
       >
-        ↵
+        <Compass size={22} />
       </button>
 
       {showModal && (

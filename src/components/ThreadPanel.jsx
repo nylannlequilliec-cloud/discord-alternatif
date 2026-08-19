@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MessageSquareText, X } from 'lucide-react'
 import MessageItem from './MessageItem'
 
 // Panneau latéral d'un fil de discussion
@@ -18,14 +19,14 @@ export default function ThreadPanel({ channel, threads, currentUserId, canModera
     <div className="absolute top-0 right-0 bottom-0 w-[340px] bg-[var(--bg-secondary)] border-l border-[var(--border)] flex flex-col z-30">
       <div className="h-12 px-4 flex items-center justify-between border-b border-[var(--border)] shrink-0">
         <span className="text-[var(--text-primary)] font-semibold text-sm flex items-center gap-2">
-          🧵 Fil — #{channel.name}
+          <MessageSquareText size={16} /> Fil — #{channel.name}
         </span>
         <button
           onClick={threads.closeThread}
           className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           title="Fermer le fil"
         >
-          ✕
+          <X size={18} />
         </button>
       </div>
 

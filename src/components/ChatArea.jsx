@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Search, Paperclip, Send, X } from 'lucide-react'
 import { useMessages } from '../hooks/useMessages'
 import { useThreads } from '../hooks/useThreads'
 import MessageItem from './MessageItem'
@@ -7,18 +8,21 @@ import { supabase } from '../lib/supabase'
 function SearchBar({ query, setQuery, results, onClose }) {
   return (
     <div className="flex items-center gap-2 ml-auto min-w-0 max-w-md">
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Rechercher dans le salon…"
-        className="bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm rounded px-3 py-1.5 w-48 focus:w-64 transition-all outline-none focus:ring-2 focus:ring-[var(--accent)]"
-      />
+      <div className="relative">
+        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher dans le salon…"
+          className="bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm rounded pl-7 pr-3 py-1.5 w-48 focus:w-64 transition-all outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        />
+      </div>
       {query && (
         <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{results} résultat(s)</span>
       )}
       {query && (
         <button onClick={onClose} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]" title="Fermer la recherche">
-          ✕
+          <X size={14} />
         </button>
       )}
     </div>
@@ -149,7 +153,9 @@ export default function ChatArea({ channel, currentUserId, canModerate, onDmUser
               {p.type?.startsWith('image/') ? (
                 <img src={p.url} alt={p.name} className="h-20 rounded object-cover" />
               ) : (
-                <div className="h-20 flex items-center justify-center text-3xl">📎</div>
+                <div className="h-20 flex items-center justify-center">
+                  <Paperclip size={28} className="text-[var(--text-muted)]" />
+                </div>
               )}
               <span className="block text-xs text-[var(--text-muted)] truncate mt-1">{p.name}</span>
               <button
@@ -168,10 +174,10 @@ export default function ChatArea({ channel, currentUserId, canModerate, onDmUser
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-xl pb-1"
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] pb-1"
             title="Joindre un fichier ou une image"
           >
-            📎
+            <Paperclip size={18} />
           </button>
           <textarea
             value={input}
@@ -185,10 +191,10 @@ export default function ChatArea({ channel, currentUserId, canModerate, onDmUser
           {input.trim() && (
             <button
               type="submit"
-              className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-xl pb-1"
+              className="text-[var(--accent)] hover:text-[var(--accent-hover)] pb-1"
               title="Envoyer"
             >
-              ➤
+              <Send size={18} />
             </button>
           )}
         </div>

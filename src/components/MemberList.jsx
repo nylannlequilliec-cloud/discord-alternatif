@@ -1,12 +1,22 @@
 import { useState } from 'react'
+import {
+  Smile,
+  MessageSquarePlus,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  Crown,
+  ShieldCheck,
+  MoreHorizontal,
+  MicOff,
+  Mic,
+  Eraser,
+  UserX,
+  Ban,
+} from 'lucide-react'
 import { useMembers } from '../hooks/useMembers'
 import { useAuth } from '../hooks/useAuth'
 import { STATUS_COLORS } from './NotificationsBell'
-
-const ROLE_BADGES = {
-  owner: { label: 'Propriétaire', icon: '👑', color: '#f0b232' },
-  admin: { label: 'Admin', icon: '🛡️', color: '#23a55a' },
-}
 
 export default function MemberList({ serverId, onDmUser, membersApi }) {
   const { session } = useAuth()
@@ -49,7 +59,6 @@ export default function MemberList({ serverId, onDmUser, membersApi }) {
       {sorted.map((m) => {
         const isOwner = m.role === 'owner'
         const canTarget = canModerate && m.profile?.id !== session?.user?.id && !isOwner
-        const badge = ROLE_BADGES[m.role]
         return (
           <div
             key={m.profile?.id}
@@ -70,19 +79,18 @@ export default function MemberList({ serverId, onDmUser, membersApi }) {
               />
             </div>
             <span className="text-sm text-[var(--text-muted)] truncate flex-1">{m.profile?.username}</span>
-            {badge && <span title={badge.label}>{badge.icon}</span>}
+            {isOwner && <Crown size={14} className="text-[#f0b232] shrink-0" title="Propriétaire" />}
+            {m.role === 'admin' && <ShieldCheck size={14} className="text-[#23a55a] shrink-0" title="Admin" />}
             {m.muted_until && new Date(m.muted_until) > new Date() && (
-              <span title="Rendu muet" className="text-xs">🔇</span>
+              <MicOff size={13} className="text-[var(--text-muted)] shrink-0" title="Rendu muet" />
             )}
-            {(canTarget || m.profile?.id) && (
-              <button
-                onClick={() => setMenuFor((cur) => (cur === m.profile?.id ? null : m.profile?.id))}
-                className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-xs px-1"
-                title="Actions"
-              >
-                ⋯
-              </button>
-            )}
+            <button
+              onClick={() => setMenuFor((cur) => (cur === m.profile?.id ? null : m.profile?.id))}
+              className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--text-secondary)] p-0.5"
+              title="Actions"
+            >
+              <MoreHorizontal size={15} />
+            </button>
 
             {menuFor === m.profile?.id && (
               <div className="absolute left-2 right-2 top-full mt-1 bg-[var(--bg-modal)] border border-[var(--border)] rounded-lg shadow-xl z-50 py-1">
@@ -91,56 +99,64 @@ export default function MemberList({ serverId, onDmUser, membersApi }) {
                     onDmUser?.(m.profile.id)
                     setMenuFor(null)
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 >
-                  💬 Message privé
+                  <MessageCircle size={14} /> Message privé
                 </button>
                 {canTarget && (
                   <>
                     <div className="border-t border-[var(--border)] my-1" />
                     <button
                       onClick={() => doAction(() => setRole(m.profile.id, m.role === 'admin' ? 'member' : 'admin'))}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                     >
-                      {m.role === 'admin' ? '⬇️ Retirer le rôle admin' : '⬆️ Nommer admin'}
+                      {m.role === 'admin' ? (
+                        <>
+                          <ShieldCheck size={14} /> Retirer le rôle admin
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={14} /> Nommer admin
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={() => doAction(() => muteMember(m.profile.id, 10))}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                     >
-                      🔇 Rendre muet 10 min
+                      <MicOff size={14} /> Rendre muet 10 min
                     </button>
                     <button
                       onClick={() => doAction(() => muteMember(m.profile.id, 60))}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                     >
-                      🔇 Rendre muet 1 h
+                      <MicOff size={14} /> Rendre muet 1 h
                     </button>
                     {m.muted_until && (
                       <button
                         onClick={() => doAction(() => unmuteMember(m.profile.id))}
-                        className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                       >
-                        🔊 Retirer le mute
+                        <Mic size={14} /> Retirer le mute
                       </button>
                     )}
                     <button
                       onClick={() => doAction(() => deleteUserMessages(m.profile.id))}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                     >
-                      🧹 Supprimer ses messages
+                      <Eraser size={14} /> Supprimer ses messages
                     </button>
                     <button
                       onClick={() => doAction(() => kickMember(m.profile.id))}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--warning)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--warning)] hover:bg-[var(--bg-hover)]"
                     >
-                      👢 Expulser du serveur
+                      <UserX size={14} /> Expulser du serveur
                     </button>
                     <button
                       onClick={() => setBanTarget(m.profile.id)}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--danger)] hover:bg-[var(--bg-hover)]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--danger)] hover:bg-[var(--bg-hover)]"
                     >
-                      🚫 Bannir…
+                      <Ban size={14} /> Bannir…
                     </button>
                   </>
                 )}

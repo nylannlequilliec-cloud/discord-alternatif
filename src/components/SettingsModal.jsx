@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useUI } from '../context/UIContext'
@@ -104,7 +105,9 @@ export default function SettingsModal({ open, onClose }) {
                   ) : (
                     profile?.username?.slice(0, 2).toUpperCase()
                   )}
-                  <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[10px] py-0.5">📷</span>
+                  <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[10px] py-1 flex items-center justify-center">
+                    <Camera size={12} />
+                  </span>
                 </button>
                 <div className="text-sm text-[var(--text-muted)]">
                   {uploading ? 'Envoi…' : 'Clique sur la photo pour la changer'}
@@ -220,7 +223,7 @@ export default function SettingsModal({ open, onClose }) {
               ) : !push.configured ? (
                 <p className="text-sm text-[var(--text-muted)]">
                   Les notifications push ne sont pas encore configurées sur le serveur (clé VAPID manquante). Les notifications
-                  dans l'app (cloche 🔔) fonctionnent quand même.
+                  dans l'app (cloche de notifications) fonctionnent quand même.
                 </p>
               ) : push.subscribed ? (
                 <div>

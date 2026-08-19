@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Smile, MessageSquarePlus, MessageCircle, Pencil, Trash2, Paperclip } from 'lucide-react'
 import EmojiPicker from './EmojiPicker'
 import { supabase } from '../lib/supabase'
 
@@ -39,7 +40,7 @@ function Attachment({ att }) {
       rel="noreferrer"
       className="mt-1.5 inline-flex items-center gap-2 bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] text-sm rounded px-3 py-2 max-w-full"
     >
-      <span>📎</span>
+      <Paperclip size={13} className="shrink-0" />
       <span className="truncate">{att.name}</span>
       <span className="text-xs text-[var(--text-muted)]">{(att.size / 1024).toFixed(0)} Ko</span>
     </a>
@@ -184,10 +185,10 @@ export default function MessageItem({
           <div className="relative">
             <button
               onClick={() => setShowPicker((v) => !v)}
-              className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-lg"
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
               title="Réagir"
             >
-              😀
+              <Smile size={16} />
             </button>
             {showPicker && (
               <EmojiPicker
@@ -195,7 +196,6 @@ export default function MessageItem({
                   toggleReaction?.(msg.id, emoji)
                   setShowPicker(false)
                 }}
-                onClose={() => setShowPicker(false)}
               />
             )}
           </div>
@@ -204,14 +204,14 @@ export default function MessageItem({
             className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             title="Créer un fil de discussion"
           >
-            🧵
+            <MessageSquarePlus size={16} />
           </button>
           <button
             onClick={() => onDmUser?.(msg.author_id)}
             className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             title="Message privé"
           >
-            💬
+            <MessageCircle size={16} />
           </button>
           {isOwn && (
             <button
@@ -219,7 +219,7 @@ export default function MessageItem({
               className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
               title="Modifier"
             >
-              ✏️
+              <Pencil size={16} />
             </button>
           )}
           {(isOwn || canModerate) && (
@@ -228,7 +228,7 @@ export default function MessageItem({
               className="w-8 h-8 flex items-center justify-center rounded hover:bg-[var(--bg-hover)] text-[var(--danger)]"
               title="Supprimer"
             >
-              🗑️
+              <Trash2 size={16} />
             </button>
           )}
         </div>

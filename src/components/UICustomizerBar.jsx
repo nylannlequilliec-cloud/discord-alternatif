@@ -1,3 +1,4 @@
+import { Palette, RotateCcw, Check } from 'lucide-react'
 import { useUI } from '../context/UIContext'
 
 // Barre d'outils du mode édition (en haut, centrée)
@@ -9,7 +10,9 @@ export function UICustomizerBar() {
 
   return (
     <div className="ui-edit-toolbar">
-      <span className="text-sm font-semibold text-[var(--text-primary)]">🎨 Mode édition</span>
+      <span className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+        <Palette size={16} /> Mode édition
+      </span>
       <span className="text-xs text-[var(--text-muted)]">Clique sur un élément pour le personnaliser</span>
       <span className="text-xs font-medium text-[var(--accent)] px-2 py-0.5 bg-[var(--bg-active)] rounded">
         {label}
@@ -17,27 +20,27 @@ export function UICustomizerBar() {
       {selected && (
         <button
           onClick={() => resetElementStyle(selected)}
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] px-2 py-1 rounded hover:bg-[var(--bg-hover)]"
+          className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] px-2 py-1 rounded hover:bg-[var(--bg-hover)] flex items-center gap-1"
         >
-          ↺ Réinitialiser l'élément
+          <RotateCcw size={12} /> Réinitialiser l'élément
         </button>
       )}
       <button
         onClick={() => {
           if (window.confirm('Réinitialiser toute l\'interface ?')) resetAllStyles()
         }}
-        className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] px-2 py-1 rounded hover:bg-[var(--bg-hover)]"
+        className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] px-2 py-1 rounded hover:bg-[var(--bg-hover)] flex items-center gap-1"
       >
-        ↺ Tout réinitialiser
+        <RotateCcw size={12} /> Tout réinitialiser
       </button>
       <button
         onClick={() => {
           exitEditMode()
           setSelected(null)
         }}
-        className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-medium rounded px-3 py-1.5"
+        className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-medium rounded px-3 py-1.5 flex items-center gap-1"
       >
-        Terminé ✓
+        <Check size={13} /> Terminé
       </button>
     </div>
   )
@@ -200,9 +203,9 @@ export function PropertiesPanel() {
 
         <button
           onClick={() => resetElementStyle(selected)}
-          className="w-full text-xs text-[var(--danger)] hover:bg-[var(--bg-hover)] rounded py-1.5"
+          className="w-full text-xs text-[var(--danger)] hover:bg-[var(--bg-hover)] rounded py-1.5 flex items-center justify-center gap-1"
         >
-          ↺ Réinitialiser cet élément
+          <RotateCcw size={12} /> Réinitialiser cet élément
         </button>
       </div>
     </div>

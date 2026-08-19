@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { TriangleAlert } from 'lucide-react'
 
 // Garde-fou : si un composant plante, on affiche un message clair
 // (au lieu d'un écran gris) avec le détail de l'erreur.
@@ -15,7 +16,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="h-screen w-screen flex items-center justify-center bg-[var(--bg-primary)] px-6">
           <div className="bg-[var(--bg-secondary)] rounded-lg p-8 max-w-md w-full text-center">
-            <div className="text-4xl mb-3">😵</div>
+            <TriangleAlert size={40} className="mx-auto mb-3 text-[var(--warning)]" />
             <h2 className="text-[var(--text-primary)] font-bold text-lg mb-2">
               Oups, une erreur est survenue
             </h2>
