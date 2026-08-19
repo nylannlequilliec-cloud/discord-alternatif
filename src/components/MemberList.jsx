@@ -1,10 +1,5 @@
 import { useState } from 'react'
 import {
-  Smile,
-  MessageSquarePlus,
-  MessageCircle,
-  Pencil,
-  Trash2,
   Crown,
   ShieldCheck,
   MoreHorizontal,
@@ -18,7 +13,7 @@ import { useMembers } from '../hooks/useMembers'
 import { useAuth } from '../hooks/useAuth'
 import { STATUS_COLORS } from './NotificationsBell'
 
-export default function MemberList({ serverId, onDmUser, membersApi }) {
+export default function MemberList({ serverId, onDmUser, onUserClick, membersApi }) {
   const { session } = useAuth()
   const internal = useMembers(serverId, { disabled: !!membersApi })
   const { members, canModerate, banMember, muteMember, unmuteMember, setRole, deleteUserMessages, kickMember } =
@@ -65,7 +60,11 @@ export default function MemberList({ serverId, onDmUser, membersApi }) {
             className="relative flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-hover)] group"
             onMouseLeave={() => setMenuFor((cur) => (cur === m.profile?.id ? null : cur))}
           >
-            <div className="relative shrink-0">
+            <button
+              onClick={() => onUserClick?.(m.profile)}
+              className="relative shrink-0"
+              title="Voir le profil"
+            >
               <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                 {m.profile?.avatar_url ? (
                   <img src={m.profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -77,8 +76,19 @@ export default function MemberList({ serverId, onDmUser, membersApi }) {
                 className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--bg-secondary)]"
                 style={{ background: STATUS_COLORS[m.profile?.status] || STATUS_COLORS.offline }}
               />
+            </button>
+            <div className="min-w-0 flex-1">
+              <button
+                onClick={() => onUserClick?.(m.profile)}
+                className="text-sm text-[var(--text-muted)] truncate block max-w-full hover:underline"
+                title="Voir le profil"
+              >
+                {m.profile?.username}
+              </button>
+              {m.profile?.custom_status && (
+                <div className="text-[11px] text-[var(--text-muted)] truncate max-w-full">{m.profile.custom_status}</div>
+              )}
             </div>
-            <span className="text-sm text-[var(--text-muted)] truncate flex-1">{m.profile?.username}</span>
             {isOwner && <Crown size={14} className="text-[#f0b232] shrink-0" title="Propriétaire" />}
             {m.role === 'admin' && <ShieldCheck size={14} className="text-[#23a55a] shrink-0" title="Admin" />}
             {m.muted_until && new Date(m.muted_until) > new Date() && (

@@ -5,6 +5,7 @@ import { useChannels } from '../hooks/useChannels'
 import { useDMs } from '../hooks/useDMs'
 import { useThreads } from '../hooks/useThreads'
 import { useMembers } from '../hooks/useMembers'
+import { useFriends } from '../hooks/useFriends'
 import { useVoice } from '../hooks/useVoice'
 import { useSchemaProbe } from '../hooks/useSchema'
 import { useUI } from '../context/UIContext'
@@ -14,23 +15,29 @@ import ChatArea from '../components/ChatArea'
 import MemberList from '../components/MemberList'
 import DMPanel from '../components/DMPanel'
 import SettingsModal from '../components/SettingsModal'
+import ServerSettingsModal from '../components/ServerSettingsModal'
 import VoicePanel from '../components/VoicePanel'
+import ProfileCard from '../components/ProfileCard'
 import UIBox from '../components/UIBox'
 import { UICustomizerBar, PropertiesPanel } from '../components/UICustomizerBar'
 
 export default function Home() {
   const { session, profile, signOut } = useAuth()
-  const { servers, createServer, joinServer } = useServers()
+  const { servers, createServer, joinServer, updateServer, changeServerIcon, deleteServer, leaveServer, transferOwnership } =
+    useServers()
   const [view, setView] = useState('server') // 'server' | 'dm'
   const [activeServerId, setActiveServerId] = useState(null)
   const [activeChannel, setActiveChannel] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [serverSettingsOpen, setServerSettingsOpen] = useState(false)
+  const [profileUser, setProfileUser] = useState(null)
   const [v2BannerDismissed, setV2BannerDismissed] = useState(false)
   const pendingChannelRef = useRef(null)
   const { editMode, setEditMode } = useUI()
   const voice = useVoice()
   const v2 = useSchemaProbe()
   const dms = useDMs()
+  const friends = useFriends()
 
   const { channels, createChannel, renameChannel, deleteChannel } = useChannels(activeServerId)
   const threads = useThreads(activeChannel?.id)
@@ -47,6 +54,7 @@ export default function Home() {
   useEffect(() => {
     setActiveChannel(null)
     pendingChannelRef.current = null
+    setServerSettingsOpen(false)
   }, [activeServerId])
 
   // Sélection du premier salon textuel, ou du salon demandé via une notification
@@ -95,6 +103,7 @@ export default function Home() {
   }
 
   const totalDmUnread = Object.values(dms.unread).reduce((a, b) => a + b, 0)
+  const isFriend = (userId) => friends.friends.some((f) => f.id === userId)
 
   return (
     <div className="h-screen w-screen flex overflow-hidden relative bg-[var(--bg-primary)]">
@@ -102,7 +111,7 @@ export default function Home() {
         <div className="fixed top-0 inset-x-0 z-[95] bg-[var(--warning)] text-[var(--bg-primary)] text-xs font-medium px-4 py-2 flex items-center justify-center gap-3">
           <span>
             🔧 Mise à jour en attente : exécute <code className="font-bold">supabase/schema.sql</code> dans Supabase
-            (SQL Editor) pour activer DM, fils, réactions, modération et uploads. Voir le README.
+            (SQL Editor) pour activer serveurs, DM, amis, épingles et modération. Voir le README.
           </span>
           <button onClick={() => setV2BannerDismissed(true)} className="font-bold hover:opacity-70">✕</button>
         </div>
@@ -126,7 +135,7 @@ export default function Home() {
       </UIBox>
 
       {view === 'dm' ? (
-        <DMPanel dms={dms} />
+        <DMPanel dms={dms} onUserClick={setProfileUser} />
       ) : activeServer ? (
         <>
           <UIBox id="channel-sidebar" className="h-full shrink-0">
@@ -148,6 +157,7 @@ export default function Home() {
               onJoinVoice={handleJoinVoice}
               voiceChannelId={voice.channel?.id}
               myRole={membersApi.myRole}
+              onOpenServerSettings={() => setServerSettingsOpen(true)}
             />
           </UIBox>
 
@@ -155,12 +165,14 @@ export default function Home() {
             channel={activeChannel}
             currentUserId={session?.user?.id}
             canModerate={membersApi.canModerate}
+            canPin={membersApi.myRole === 'owner' || membersApi.myRole === 'admin'}
             onDmUser={handleOpenDm}
+            onUserClick={setProfileUser}
             threads={threads}
           />
 
           <UIBox id="member-list" className="h-full shrink-0 hidden lg:block">
-            <MemberList serverId={activeServerId} onDmUser={handleOpenDm} membersApi={membersApi} />
+            <MemberList serverId={activeServerId} onDmUser={handleOpenDm} onUserClick={setProfileUser} membersApi={membersApi} />
           </UIBox>
         </>
       ) : (
@@ -174,6 +186,33 @@ export default function Home() {
 
       <VoicePanel voice={voice} channel={voice.channel} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {serverSettingsOpen && activeServer && (
+        <ServerSettingsModal
+          server={activeServer}
+          myRole={membersApi.myRole}
+          onClose={() => setServerSettingsOpen(false)}
+          onUpdate={(patch, iconFile) => (iconFile ? changeServerIcon(activeServer.id, iconFile) : updateServer(activeServer.id, patch))}
+          onDelete={deleteServer}
+          onLeave={leaveServer}
+          onTransfer={transferOwnership}
+        />
+      )}
+
+      {profileUser && (
+        <ProfileCard
+          user={profileUser}
+          isFriend={isFriend(profileUser.id)}
+          onClose={() => setProfileUser(null)}
+          onDm={handleOpenDm}
+          onAddFriend={(username) => {
+            friends.addFriend(username)
+          }}
+          onRemoveFriend={(userId) => {
+            friends.decline(userId)
+          }}
+        />
+      )}
     </div>
   )
 }

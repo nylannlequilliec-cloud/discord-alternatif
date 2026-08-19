@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Settings, Paintbrush, LogOut, Volume2, VolumeX, MessageSquareText } from 'lucide-react'
+import { Plus, Pencil, Trash2, Settings, Paintbrush, LogOut, Volume2, VolumeX, MessageSquareText, ServerCog } from 'lucide-react'
 import { STATUS_COLORS } from './NotificationsBell'
 
 export default function ChannelSidebar({
@@ -20,6 +20,7 @@ export default function ChannelSidebar({
   onJoinVoice,
   voiceChannelId,
   myRole,
+  onOpenServerSettings,
 }) {
   const [showModal, setShowModal] = useState(null) // 'create' | 'rename' | null
   const [newChannelName, setNewChannelName] = useState('')
@@ -56,13 +57,22 @@ export default function ChannelSidebar({
 
   return (
     <div className="w-60 bg-[var(--bg-secondary)] flex flex-col shrink-0" data-ui-id="channel-sidebar">
-      <button
-        onClick={() => setShowInvite(true)}
-        className="h-12 px-4 flex items-center justify-between border-b border-[var(--border)] shadow-sm shrink-0 hover:bg-[var(--bg-hover)] transition"
-        title="Inviter des amis (code d'invitation)"
-      >
-        <span className="text-[var(--text-primary)] font-semibold text-[15px] truncate">{server?.name}</span>
-      </button>
+      <div className="h-12 px-2 flex items-center justify-between border-b border-[var(--border)] shadow-sm shrink-0">
+        <button
+          onClick={() => setShowInvite(true)}
+          className="flex items-center gap-1.5 min-w-0 hover:opacity-85"
+          title="Inviter des amis (code d'invitation)"
+        >
+          <span className="text-[var(--text-primary)] font-semibold text-[15px] truncate">{server?.name}</span>
+        </button>
+        <button
+          onClick={onOpenServerSettings}
+          className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1.5 rounded hover:bg-[var(--bg-hover)] shrink-0"
+          title="Paramètres du serveur"
+        >
+          <ServerCog size={16} />
+        </button>
+      </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-3">
         <div className="mb-4">

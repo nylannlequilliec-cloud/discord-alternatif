@@ -68,6 +68,16 @@ returns boolean language sql security definer stable as $$
   );
 $$;
 
+create or replace function public.can_pin_in_channel(cid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.channels c
+    join public.server_members sm on sm.server_id = c.server_id
+    where c.id = cid and sm.user_id = auth.uid()
+      and sm.role in ('owner','admin')
+  );
+$$;
+
 -- ------------------------------------------------------------
 -- 1. PROFILS UTILISATEURS
 -- ------------------------------------------------------------
@@ -78,6 +88,8 @@ create table if not exists public.profiles (
   status text default 'online' check (status in ('online','idle','dnd','offline')),
   created_at timestamptz default now()
 );
+
+alter table public.profiles add column if not exists custom_status text;
 
 alter table public.profiles enable row level security;
 
@@ -131,6 +143,12 @@ create policy "Un user connecté peut créer un serveur"
 drop policy if exists "Le owner peut modifier son serveur" on public.servers;
 create policy "Le owner peut modifier son serveur"
   on public.servers for update
+  to authenticated
+  using (owner_id = auth.uid());
+
+drop policy if exists "Le owner peut supprimer son serveur" on public.servers;
+create policy "Le owner peut supprimer son serveur"
+  on public.servers for delete
   to authenticated
   using (owner_id = auth.uid());
 
@@ -238,7 +256,7 @@ create policy "Un membre peut créer un salon"
   with check (public.is_server_member(server_id));
 
 -- ------------------------------------------------------------
--- 5. MESSAGES (+ fils, pièces jointes, édition)
+-- 5. MESSAGES (+ fils, pièces jointes, édition, réponses)
 -- ------------------------------------------------------------
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
@@ -252,6 +270,7 @@ create table if not exists public.messages (
 
 alter table public.messages add column if not exists thread_id uuid references public.messages(id) on delete cascade;
 alter table public.messages add column if not exists attachments jsonb default '[]'::jsonb;
+alter table public.messages add column if not exists reply_to_id uuid references public.messages(id) on delete set null;
 
 alter table public.messages enable row level security;
 
@@ -599,6 +618,140 @@ create policy "files: écriture connecté"
   with check (bucket_id = 'files');
 
 -- ------------------------------------------------------------
+-- 12b. AMIS (demandes, acceptation, liste)
+-- ------------------------------------------------------------
+create table if not exists public.friends (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete cascade,
+  friend_id uuid references public.profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted')),
+  created_at timestamptz default now(),
+  unique (user_id, friend_id)
+);
+
+alter table public.friends enable row level security;
+
+drop policy if exists "friends: voir ses relations" on public.friends;
+create policy "friends: voir ses relations"
+  on public.friends for select
+  to authenticated
+  using (user_id = auth.uid() or friend_id = auth.uid());
+
+drop policy if exists "friends: envoyer une demande" on public.friends;
+create policy "friends: envoyer une demande"
+  on public.friends for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "friends: accepter/refuser" on public.friends;
+create policy "friends: accepter/refuser"
+  on public.friends for update
+  to authenticated
+  using (user_id = auth.uid() or friend_id = auth.uid());
+
+drop policy if exists "friends: retirer un ami" on public.friends;
+create policy "friends: retirer un ami"
+  on public.friends for delete
+  to authenticated
+  using (user_id = auth.uid() or friend_id = auth.uid());
+
+-- RPC : envoyer une demande d'ami par pseudo (insensible à la casse)
+create or replace function public.add_friend(target_username text)
+returns uuid
+language plpgsql security definer
+as $$
+declare
+  my_id uuid := auth.uid();
+  target uuid;
+begin
+  if my_id is null then
+    raise exception 'Non connecté';
+  end if;
+
+  select id into target
+  from public.profiles
+  where lower(username) = lower(target_username)
+  limit 1;
+
+  if target is null then
+    raise exception 'Utilisateur introuvable';
+  end if;
+  if target = my_id then
+    raise exception 'Impossible de s''ajouter soi-même';
+  end if;
+
+  if exists (
+    select 1 from public.friends
+    where (user_id = my_id and friend_id = target)
+       or (user_id = target and friend_id = my_id)
+  ) then
+    raise exception 'Demande déjà envoyée ou déjà amis';
+  end if;
+
+  insert into public.friends (user_id, friend_id, status)
+  values (my_id, target, 'pending');
+
+  return target;
+end;
+$$;
+
+-- RPC : accepter une demande reçue
+create or replace function public.accept_friend(friend_uid uuid)
+returns boolean
+language plpgsql security definer
+as $$
+begin
+  update public.friends
+  set status = 'accepted'
+  where user_id = friend_uid and friend_id = auth.uid() and status = 'pending';
+  return found;
+end;
+$$;
+
+-- RPC : refuser (ou annuler) une relation
+create or replace function public.decline_friend(friend_uid uuid)
+returns boolean
+language plpgsql security definer
+as $$
+begin
+  delete from public.friends
+  where (user_id = auth.uid() and friend_id = friend_uid)
+     or (user_id = friend_uid and friend_id = auth.uid());
+  return found;
+end;
+$$;
+
+-- ------------------------------------------------------------
+-- 12c. MESSAGES ÉPINGLÉS
+-- ------------------------------------------------------------
+create table if not exists public.pins (
+  message_id uuid primary key references public.messages(id) on delete cascade,
+  channel_id uuid references public.channels(id) on delete cascade,
+  pinned_by uuid references public.profiles(id),
+  created_at timestamptz default now()
+);
+
+alter table public.pins enable row level security;
+
+drop policy if exists "pins: voir les épingles du salon" on public.pins;
+create policy "pins: voir les épingles du salon"
+  on public.pins for select
+  to authenticated
+  using (public.can_read_channel(channel_id));
+
+drop policy if exists "pins: épingler (admin/owner)" on public.pins;
+create policy "pins: épingler (admin/owner)"
+  on public.pins for insert
+  to authenticated
+  with check (public.can_pin_in_channel(channel_id));
+
+drop policy if exists "pins: désépingler (admin/owner)" on public.pins;
+create policy "pins: désépingler (admin/owner)"
+  on public.pins for delete
+  to authenticated
+  using (public.can_pin_in_channel(channel_id));
+
+-- ------------------------------------------------------------
 -- 13. REALTIME (temps réel) — sans erreur si déjà activé
 -- ------------------------------------------------------------
 do $$
@@ -612,7 +765,9 @@ begin
     'public.dm_messages',
     'public.dm_members',
     'public.dm_conversations',
-    'public.reactions'
+    'public.reactions',
+    'public.friends',
+    'public.pins'
   ]
   loop
     begin

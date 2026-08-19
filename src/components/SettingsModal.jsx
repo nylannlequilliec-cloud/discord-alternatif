@@ -23,6 +23,7 @@ export default function SettingsModal({ open, onClose }) {
   const push = usePush()
   const [username, setUsername] = useState('')
   const [status, setStatus] = useState('online')
+  const [customStatus, setCustomStatus] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
@@ -50,6 +51,7 @@ export default function SettingsModal({ open, onClose }) {
     const updates = {}
     if (username.trim() && username.trim() !== profile?.username) updates.username = username.trim()
     if (status !== profile?.status) updates.status = status
+    if (customStatus !== (profile?.custom_status || '')) updates.custom_status = customStatus.trim() || null
     if (avatarUrl && avatarUrl !== profile?.avatar_url) updates.avatar_url = avatarUrl
 
     if (Object.keys(updates).length) {
@@ -132,6 +134,18 @@ export default function SettingsModal({ open, onClose }) {
                   className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   placeholder="Ton pseudo"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[var(--text-muted)] uppercase mb-2">Statut personnalisé</label>
+                <input
+                  value={customStatus || profile?.custom_status || ''}
+                  onChange={(e) => setCustomStatus(e.target.value)}
+                  maxLength={64}
+                  placeholder="Ex : En pause café ☕"
+                  className="w-full bg-[var(--bg-input)] text-[var(--text-primary)] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                />
+                <p className="text-[11px] text-[var(--text-muted)] mt-1">Affiché sous ton pseudo partout dans l'app.</p>
               </div>
 
               <div>
