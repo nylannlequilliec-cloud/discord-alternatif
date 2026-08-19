@@ -12,6 +12,62 @@
 -- Extension pour générer des codes d'invitation aléatoires
 create extension if not exists "pgcrypto";
 
+-- ============================================================
+-- FONCTIONS D'AIDE (security definer)
+-- Elles évitent les erreurs "infinite recursion detected in
+-- policy" : les policies ne référencent plus leur propre table.
+-- ============================================================
+create or replace function public.is_server_member(sid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.server_members sm
+    where sm.server_id = sid and sm.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.get_server_role(sid uuid)
+returns text language sql security definer stable as $$
+  select role from public.server_members sm
+  where sm.server_id = sid and sm.user_id = auth.uid()
+  limit 1;
+$$;
+
+create or replace function public.is_banned(sid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.bans b
+    where b.server_id = sid and b.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.can_read_channel(cid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.channels c
+    join public.server_members sm on sm.server_id = c.server_id
+    where c.id = cid and sm.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.can_post_in_channel(cid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.channels c
+    join public.server_members sm on sm.server_id = c.server_id
+    where c.id = cid and sm.user_id = auth.uid()
+      and not exists (select 1 from public.bans b where b.server_id = c.server_id and b.user_id = auth.uid())
+      and (sm.muted_until is null or sm.muted_until < now())
+  );
+$$;
+
+create or replace function public.in_dm_conversation(cid uuid)
+returns boolean language sql security definer stable as $$
+  select exists (
+    select 1 from public.dm_members m
+    where m.conversation_id = cid and m.user_id = auth.uid()
+  );
+$$;
+
 -- ------------------------------------------------------------
 -- 1. PROFILS UTILISATEURS
 -- ------------------------------------------------------------
@@ -128,9 +184,7 @@ drop policy if exists "Un membre voit les membres de ses serveurs" on public.ser
 create policy "Un membre voit les membres de ses serveurs"
   on public.server_members for select
   to authenticated
-  using (
-    server_id in (select server_id from public.server_members where user_id = auth.uid())
-  );
+  using (public.is_server_member(server_id));
 
 -- Rejointure interdite si banni (remplace la policy V1 du même nom)
 drop policy if exists "Un user peut rejoindre un serveur" on public.server_members;
@@ -140,9 +194,7 @@ create policy "Un user peut rejoindre un serveur (sauf banni)"
   to authenticated
   with check (
     user_id = auth.uid()
-    and server_id not in (
-      select b.server_id from public.bans b where b.user_id = auth.uid()
-    )
+    and not public.is_banned(server_id)
   );
 
 drop policy if exists "Un user peut quitter un serveur" on public.server_members;
@@ -157,9 +209,7 @@ drop policy if exists "Un user voit les serveurs dont il est membre" on public.s
 create policy "Un user voit les serveurs dont il est membre"
   on public.servers for select
   to authenticated
-  using (
-    id in (select server_id from public.server_members where user_id = auth.uid())
-  );
+  using (public.is_server_member(id));
 
 -- ------------------------------------------------------------
 -- 4. SALONS (channels)
@@ -179,17 +229,13 @@ drop policy if exists "Un membre voit les salons de ses serveurs" on public.chan
 create policy "Un membre voit les salons de ses serveurs"
   on public.channels for select
   to authenticated
-  using (
-    server_id in (select server_id from public.server_members where user_id = auth.uid())
-  );
+  using (public.is_server_member(server_id));
 
 drop policy if exists "Un membre peut créer un salon" on public.channels;
 create policy "Un membre peut créer un salon"
   on public.channels for insert
   to authenticated
-  with check (
-    server_id in (select server_id from public.server_members where user_id = auth.uid())
-  );
+  with check (public.is_server_member(server_id));
 
 -- ------------------------------------------------------------
 -- 5. MESSAGES (+ fils, pièces jointes, édition)
@@ -213,13 +259,7 @@ drop policy if exists "Un membre voit les messages des salons de ses serveurs" o
 create policy "Un membre voit les messages des salons de ses serveurs"
   on public.messages for select
   to authenticated
-  using (
-    channel_id in (
-      select c.id from public.channels c
-      join public.server_members sm on sm.server_id = c.server_id
-      where sm.user_id = auth.uid()
-    )
-  );
+  using (public.can_read_channel(channel_id));
 
 -- Écriture interdite si banni ou muet (remplace la policy V1 du même nom)
 drop policy if exists "Un membre peut poster dans les salons de ses serveurs" on public.messages;
@@ -229,13 +269,7 @@ create policy "Un membre peut poster (sauf banni/muet)"
   to authenticated
   with check (
     author_id = auth.uid()
-    and channel_id in (
-      select c.id from public.channels c
-      join public.server_members sm on sm.server_id = c.server_id
-      where sm.user_id = auth.uid()
-        and sm.server_id not in (select b.server_id from public.bans b where b.user_id = auth.uid())
-        and (sm.muted_until is null or sm.muted_until < now())
-    )
+    and public.can_post_in_channel(channel_id)
   );
 
 drop policy if exists "Un user peut modifier ses propres messages" on public.messages;
@@ -353,7 +387,7 @@ drop policy if exists "dm_conversations: voir ses conversations" on public.dm_co
 create policy "dm_conversations: voir ses conversations"
   on public.dm_conversations for select
   to authenticated
-  using (id in (select conversation_id from public.dm_members where user_id = auth.uid()));
+  using (public.in_dm_conversation(id));
 
 drop policy if exists "dm_conversations: créer une conversation" on public.dm_conversations;
 create policy "dm_conversations: créer une conversation"
@@ -365,7 +399,7 @@ drop policy if exists "dm_members: voir les membres de ses conversations" on pub
 create policy "dm_members: voir les membres de ses conversations"
   on public.dm_members for select
   to authenticated
-  using (conversation_id in (select conversation_id from public.dm_members where user_id = auth.uid()));
+  using (public.in_dm_conversation(conversation_id));
 
 drop policy if exists "dm_members: ajouter un membre via la fonction dédiée" on public.dm_members;
 create policy "dm_members: ajouter un membre via la fonction dédiée"
@@ -377,7 +411,7 @@ drop policy if exists "dm_messages: lire les messages de ses conversations" on p
 create policy "dm_messages: lire les messages de ses conversations"
   on public.dm_messages for select
   to authenticated
-  using (conversation_id in (select conversation_id from public.dm_members where user_id = auth.uid()));
+  using (public.in_dm_conversation(conversation_id));
 
 drop policy if exists "dm_messages: poster dans ses conversations" on public.dm_messages;
 create policy "dm_messages: poster dans ses conversations"
@@ -385,7 +419,7 @@ create policy "dm_messages: poster dans ses conversations"
   to authenticated
   with check (
     author_id = auth.uid()
-    and conversation_id in (select conversation_id from public.dm_members where user_id = auth.uid())
+    and public.in_dm_conversation(conversation_id)
   );
 
 drop policy if exists "dm_messages: modifier ses messages" on public.dm_messages;
@@ -475,12 +509,7 @@ create policy "reactions: lire (membres du serveur du salon)"
   on public.reactions for select
   to authenticated
   using (
-    message_id in (
-      select m.id from public.messages m
-      join public.channels c on c.id = m.channel_id
-      join public.server_members sm on sm.server_id = c.server_id
-      where sm.user_id = auth.uid()
-    )
+    message_id in (select m.id from public.messages m where public.can_read_channel(m.channel_id))
   );
 
 drop policy if exists "reactions: ajouter sa réaction" on public.reactions;
@@ -504,34 +533,19 @@ drop policy if exists "bans: voir (admin/owner)" on public.bans;
 create policy "bans: voir (admin/owner)"
   on public.bans for select
   to authenticated
-  using (
-    server_id in (
-      select sm.server_id from public.server_members sm
-      where sm.user_id = auth.uid() and sm.role in ('owner','admin')
-    )
-  );
+  using (public.get_server_role(server_id) in ('owner','admin'));
 
 drop policy if exists "bans: bannir (admin/owner)" on public.bans;
 create policy "bans: bannir (admin/owner)"
   on public.bans for insert
   to authenticated
-  with check (
-    server_id in (
-      select sm.server_id from public.server_members sm
-      where sm.user_id = auth.uid() and sm.role in ('owner','admin')
-    )
-  );
+  with check (public.get_server_role(server_id) in ('owner','admin'));
 
 drop policy if exists "bans: débannir (admin/owner)" on public.bans;
 create policy "bans: débannir (admin/owner)"
   on public.bans for delete
   to authenticated
-  using (
-    server_id in (
-      select sm.server_id from public.server_members sm
-      where sm.user_id = auth.uid() and sm.role in ('owner','admin')
-    )
-  );
+  using (public.get_server_role(server_id) in ('owner','admin'));
 
 -- ------------------------------------------------------------
 -- 11. ABONNEMENTS PUSH (notifications navigateur)

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { safeQuery } from '../hooks/useSchema'
@@ -15,6 +15,7 @@ const STATUS_COLORS = { online: '#23a55a', idle: '#f0b232', dnd: '#ed4245', offl
 // Cloche de notifications (mentions + messages privés), temps réel
 export default function NotificationsBell({ onOpenDm, onOpenMention }) {
   const { session } = useAuth()
+  const uid = useRef(Math.random().toString(36).slice(2, 8)).current
   const [items, setItems] = useState([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -68,7 +69,7 @@ export default function NotificationsBell({ onOpenDm, onOpenMention }) {
   useEffect(() => {
     if (!session?.user) return
     const sub = supabase
-      .channel('notif-bell')
+      .channel(`notif-bell-${uid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` }, fetchNotifications)
       .subscribe()
     return () => supabase.removeChannel(sub)

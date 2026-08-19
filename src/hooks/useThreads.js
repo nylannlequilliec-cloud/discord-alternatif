@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { safeQuery } from './useSchema'
 
 // Fils de discussion : liste des fils actifs d'un salon + réponses d'un fil
-export function useThreads(channelId) {
+// `disabled` : quand l'instance parente (Home) fournit déjà les données
+export function useThreads(channelId, { disabled = false } = {}) {
+  const uid = useRef(Math.random().toString(36).slice(2, 8)).current
   const [threads, setThreads] = useState([]) // messages parents ayant des réponses
   const [replies, setReplies] = useState([]) // réponses du fil ouvert
   const [activeThread, setActiveThread] = useState(null) // id du message parent
@@ -34,12 +36,13 @@ export function useThreads(channelId) {
   }, [channelId])
 
   useEffect(() => {
+    if (disabled) return
     fetchThreads()
     if (!channelId) {
       setActiveThread(null)
       setReplies([])
     }
-  }, [channelId, fetchThreads])
+  }, [channelId, fetchThreads, disabled])
 
   // Attention à l'ORDRE : loadReplies doit être déclaré AVANT l'effet temps réel
   // qui le référence dans ses dépendances (sinon erreur TDZ au rendu)
@@ -57,9 +60,9 @@ export function useThreads(channelId) {
 
   // Temps réel : une nouvelle réponse = le fil remonte
   useEffect(() => {
-    if (!channelId) return
+    if (disabled || !channelId) return
     const sub = supabase
-      .channel(`threads:${channelId}`)
+      .channel(`threads:${channelId}-${uid}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` },
@@ -72,7 +75,7 @@ export function useThreads(channelId) {
       )
       .subscribe()
     return () => supabase.removeChannel(sub)
-  }, [channelId, activeThread, fetchThreads, loadReplies])
+  }, [channelId, activeThread, fetchThreads, loadReplies, disabled, uid])
 
   const openThread = useCallback(
     async (parentId) => {

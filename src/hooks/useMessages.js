@@ -5,6 +5,7 @@ import { safeQuery } from './useSchema'
 
 export function useMessages(channelId) {
   const { session } = useAuth()
+  const uid = useRef(Math.random().toString(36).slice(2, 8)).current
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({}) // messageId -> [reaction]
   const [loading, setLoading] = useState(true)
@@ -61,7 +62,7 @@ export function useMessages(channelId) {
     if (channelRef.current) supabase.removeChannel(channelRef.current)
 
     const sub = supabase
-      .channel(`messages:${channelId}`)
+      .channel(`messages:${channelId}-${uid}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` },
@@ -84,7 +85,7 @@ export function useMessages(channelId) {
     channelRef.current = sub
 
     const reactionsSub = supabase
-      .channel(`reactions:${channelId}`)
+      .channel(`reactions:${channelId}-${uid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, () => fetchReactions())
       .subscribe()
 
@@ -92,7 +93,7 @@ export function useMessages(channelId) {
       supabase.removeChannel(sub)
       supabase.removeChannel(reactionsSub)
     }
-  }, [channelId, fetchReactions])
+  }, [channelId, fetchReactions, uid])
 
   const sendMessage = async (content, attachments = []) => {
     if (!session?.user || !content.trim()) return { error: null }

@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth'
 import { UIProvider } from './context/UIContext'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function AppContent() {
   const { session, loading } = useAuth()
@@ -19,10 +20,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <UIProvider>
-        <AppContent />
-      </UIProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <UIProvider>
+          <AppContent />
+        </UIProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

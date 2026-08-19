@@ -34,7 +34,7 @@ export default function Home() {
 
   const { channels, createChannel, renameChannel, deleteChannel } = useChannels(activeServerId)
   const threads = useThreads(activeChannel?.id)
-  const { myRole, canModerate } = useMembers(activeServerId)
+  const membersApi = useMembers(activeServerId)
 
   // Sélectionne automatiquement le premier serveur
   useEffect(() => {
@@ -147,20 +147,20 @@ export default function Home() {
               onOpenThread={(id) => threads.openThread(id)}
               onJoinVoice={handleJoinVoice}
               voiceChannelId={voice.channel?.id}
-              myRole={myRole}
+              myRole={membersApi.myRole}
             />
           </UIBox>
 
           <ChatArea
             channel={activeChannel}
             currentUserId={session?.user?.id}
-            canModerate={canModerate}
+            canModerate={membersApi.canModerate}
             onDmUser={handleOpenDm}
             threads={threads}
           />
 
           <UIBox id="member-list" className="h-full shrink-0 hidden lg:block">
-            <MemberList serverId={activeServerId} onDmUser={handleOpenDm} />
+            <MemberList serverId={activeServerId} onDmUser={handleOpenDm} membersApi={membersApi} />
           </UIBox>
         </>
       ) : (

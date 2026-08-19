@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { safeQuery } from './useSchema'
 
 // Membres d'un serveur + actions de modération (ban, mute, rôles)
-export function useMembers(serverId) {
+// `disabled` : quand la donnée vient d'une instance parente (Home fournit
+// déjà le hook à MemberList), on n'abonne pas de doublon.
+export function useMembers(serverId, { disabled = false } = {}) {
   const { session } = useAuth()
+  const uid = useRef(Math.random().toString(36).slice(2, 8)).current
   const [members, setMembers] = useState([])
   const [myRole, setMyRole] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -24,6 +27,7 @@ export function useMembers(serverId) {
   }, [serverId])
 
   useEffect(() => {
+    if (disabled) return
     fetchMembers()
     setMyRole(null)
     if (serverId && session?.user) {
@@ -36,17 +40,17 @@ export function useMembers(serverId) {
           .maybeSingle()
       ).then(({ data }) => setMyRole(data?.role || null))
     }
-  }, [serverId, session, fetchMembers])
+  }, [serverId, session, fetchMembers, disabled])
 
   // Temps réel sur les membres
   useEffect(() => {
-    if (!serverId) return
+    if (disabled || !serverId) return
     const sub = supabase
-      .channel(`members:${serverId}`)
+      .channel(`members:${serverId}-${uid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'server_members', filter: `server_id=eq.${serverId}` }, fetchMembers)
       .subscribe()
     return () => supabase.removeChannel(sub)
-  }, [serverId, fetchMembers])
+  }, [serverId, fetchMembers, disabled, uid])
 
   const canModerate = myRole === 'owner' || myRole === 'admin'
 

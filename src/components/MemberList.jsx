@@ -8,10 +8,11 @@ const ROLE_BADGES = {
   admin: { label: 'Admin', icon: '🛡️', color: '#23a55a' },
 }
 
-export default function MemberList({ serverId, onDmUser }) {
+export default function MemberList({ serverId, onDmUser, membersApi }) {
   const { session } = useAuth()
+  const internal = useMembers(serverId, { disabled: !!membersApi })
   const { members, canModerate, banMember, muteMember, unmuteMember, setRole, deleteUserMessages, kickMember } =
-    useMembers(serverId)
+    membersApi || internal
   const [menuFor, setMenuFor] = useState(null) // userId avec menu ouvert
   const [banTarget, setBanTarget] = useState(null) // userId à bannir
   const [reason, setReason] = useState('')

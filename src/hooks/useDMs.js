@@ -4,9 +4,12 @@ import { useAuth } from './useAuth'
 import { safeQuery } from './useSchema'
 
 // Messages privés : conversations, messages, temps réel, notifications
-export function useDMs() {
+// `disabled` : quand la donnée vient d'une instance parente (ex: DMPanel
+// reçoit le hook de Home), on n'abonne pas de doublon.
+export function useDMs({ disabled = false } = {}) {
   const { session } = useAuth()
   const me = session?.user?.id
+  const uid = useRef(Math.random().toString(36).slice(2, 8)).current
   const [conversations, setConversations] = useState([]) // { id, other: profile, lastMessage }
   const [activeId, setActiveId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -67,30 +70,31 @@ export function useDMs() {
   }, [me])
 
   useEffect(() => {
+    if (disabled) return
     fetchConversations()
     fetchUnread()
-  }, [fetchConversations, fetchUnread])
+  }, [disabled, fetchConversations, fetchUnread])
 
   // Temps réel : nouvelles conversations + messages
   useEffect(() => {
-    if (!me) return
+    if (disabled || !me) return
     const subs = [
       supabase
-        .channel('dms-list')
+        .channel(`dms-list-${uid}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'dm_members', filter: `user_id=eq.${me}` }, fetchConversations)
         .subscribe(),
       supabase
-        .channel('dms-unread')
+        .channel(`dms-unread-${uid}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${me}` }, fetchUnread)
         .subscribe(),
     ]
     subsRef.current = subs
     return () => subs.forEach((s) => supabase.removeChannel(s))
-  }, [me, fetchConversations, fetchUnread])
+  }, [disabled, me, uid, fetchConversations, fetchUnread])
 
   // Messages de la conversation active
   useEffect(() => {
-    if (!activeId) {
+    if (disabled || !activeId) {
       setMessages([])
       return
     }
@@ -109,7 +113,7 @@ export function useDMs() {
     load()
 
     const sub = supabase
-      .channel(`dm:${activeId}`)
+      .channel(`dm:${activeId}-${uid}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${activeId}` }, async (payload) => {
         const { data: author } = await safeQuery(
           supabase.from('profiles').select('id, username, avatar_url').eq('id', payload.new.author_id).single()
@@ -122,7 +126,7 @@ export function useDMs() {
       active = false
       supabase.removeChannel(sub)
     }
-  }, [activeId])
+  }, [disabled, activeId, uid])
 
   // Attention à l'ORDRE : markRead doit être déclaré AVANT openConversation
   // (qui le référence dans ses dépendances useCallback — sinon erreur TDZ au rendu)

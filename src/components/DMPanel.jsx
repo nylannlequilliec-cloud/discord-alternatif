@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 // Panneau des messages privés : liste des conversations + chat
 export default function DMPanel({ onOpenConversation, dms: dmsProp }) {
   const { session } = useAuth()
-  const internalDms = useDMs()
+  const internalDms = useDMs({ disabled: !!dmsProp })
   const dms = dmsProp || internalDms
   const bottomRef = useRef(null)
   const inputRef = useRef(null)

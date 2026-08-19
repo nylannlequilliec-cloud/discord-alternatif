@@ -27,7 +27,7 @@ function SearchBar({ query, setQuery, results, onClose }) {
 
 export default function ChatArea({ channel, currentUserId, canModerate, onDmUser, threads: threadsProp }) {
   const { messages, reactions, loading, sendMessage, toggleReaction } = useMessages(channel?.id)
-  const internalThreads = useThreads(channel?.id)
+  const internalThreads = useThreads(channel?.id, { disabled: !!threadsProp })
   const threads = threadsProp || internalThreads
   const [input, setInput] = useState('')
   const [query, setQuery] = useState('')
